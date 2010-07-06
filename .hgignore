@@ -1,0 +1,15 @@
+syntax: glob
+bin/
+syntax: glob
+project/
+syntax: glob
+target/
+lib/
+syntax:regexp
+.DS_Store$
+syntax: glob
+*~
+syntax: regexp
+(.*/)?\#[^/]*\#$
+syntax: regexp
+(.*)\.orig
