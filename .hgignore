@@ -13,3 +13,6 @@ syntax: regexp
 (.*/)?\#[^/]*\#$
 syntax: regexp
 (.*)\.orig
+syntax: regexp
+\.\#(.*)
+

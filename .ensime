@@ -1,0 +1,13 @@
+(
+ :server-root "/home/kmels/.emacs.d/scala/ensime-0.0.13/"
+ :server-cmd "bin/server.sh"
+ :server-host "localhost"
+ :server-env ()
+
+ :project-package "main"
+ :source ( :include("src/main/scala"))
+ 
+ :use-sbt t
+ :dependency-jars("lib")
+ :target "target/classes"
+ )

@@ -1,14 +1,17 @@
 package gui
 
 import scala.swing._
+import panels.{LeftPanel,RightPanel}
 
 object Main extends SimpleSwingApplication{
   def top = new MainFrame{
-    title = "PTWB"
+    title = "kDecaf!"
 
-    contents = new FlowPanel{
-      
-      border = Swing.EmptyBorder(30,30,10,30)
+    contents = new FlowPanel {
+      contents += LeftPanel
+      contents += RightPanel
     }
+
+    peer.setResizable(false)
   }
 }
