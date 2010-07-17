@@ -13,7 +13,6 @@ object LeftPanel extends BoxPanel(Orientation.Vertical){
 
   contents += runButton
   contents += compileButton
-
 }
 
 object RightPanel extends BoxPanel(Orientation.Vertical){
