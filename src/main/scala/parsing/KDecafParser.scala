@@ -19,19 +19,20 @@ object KDecafParser extends StandardTokenParsers{
 
   def declarations:Parser[List[Declaration]] = "{" ~> rep(declaration) <~ "}"
 
-  def declaration:Parser[Declaration] = varDeclaration | structDeclaration // | //methodDeclaration
+  def declaration:Parser[Declaration] = varDeclaration | structDeclaration | methodDeclaration 
 
-  def varDeclarations:Parser[List[VarDeclaration]] = "{" ~> rep1(varDeclaration) <~ "}"
+  def varDeclarations:Parser[List[VarDeclaration]] = "{" ~> rep(varDeclaration) <~ "}"
 
-  def varDeclaration:Parser[VarDeclaration] = varArrayDeclaration | varType ~ ident <~ ";" ^^ { case varType~id => VarDeclaration(varType,id)} | structVarDeclaration | structConstructorVarDeclaration
+  def varDeclaration:Parser[VarDeclaration] = varArrayDeclaration | varType ~ ident <~ ";" ^^ { 
+    case varType~id => VarDeclaration(varType,id)
+  } | structVarDeclaration | structConstructorVarDeclaration
 
   def structConstructorVarDeclaration:Parser[VarDeclaration] = structDeclaration ~ ident <~ ";" ^^ {
-      case structDeclaration~id => VarDeclaration(structDeclaration.value,id)
-    } | structDeclaration ~ ident ~ arraySizeDeclaration ^^ {
-      case structDeclaration~id~arraySie => VarDeclaration(structDeclaration.value,id)
-    }
+    case structDeclaration~id => VarDeclaration(structDeclaration.value,id)
+  } | structDeclaration ~ ident ~ arraySizeDeclaration ^^ {
+    case structDeclaration~id~arraySie => VarDeclaration(structDeclaration.value,id)
+  }
   
-
   def structVarDeclaration:Parser[VarDeclaration] = "struct" ~> ident ~ ident <~ ";" ^^ {
     case structName ~ id => VarDeclaration(struct(structName),id)
   }
@@ -49,8 +50,42 @@ object KDecafParser extends StandardTokenParsers{
   def structDeclaration:Parser[StructDeclaration] = "struct" ~> ident ~ varDeclarations ^^ { 
     case structName~varDeclarations => StructDeclaration(structName, Struct(varDeclarations))
   }
- 
-  def varType:Parser[VarType[_]] = "int" ^^ { _ => int(0) } | "char" ^^ { _ => char(' ')} | "boolean" ^^ {_ => boolean(false)} | "void" ^^ {_ => void({})}
+  
+  def varType:Parser[VarType[_]] = primitiveType | "void" ^^ {
+    _ => void({})
+  }
+
+  def primitiveType:Parser[PrimitiveType[_]] = "int" ^^ { _ => int(0) } | "char" ^^ { _ => char(' ')} | "boolean" ^^ {_ => boolean(false)}
+
+  def methodDeclaration:Parser[MethodDeclaration] = varType ~ ident ~ parameterList ~ block ^^ {
+    case methodType~name~parameters~codeBlock =>  MethodDeclaration(methodType,name,parameters,codeBlock) 
+  }
+
+  def parameterList:Parser[List[Parameter]] = {
+    println("parameter list")
+    "(" ~> repsep(parameter,",") <~ ")"
+  }
+
+  def parameter:Parser[Parameter] = primitiveType ~ ident ^^ {
+    case pType~name => PrimitiveTypeParameter(pType,name)
+  } | primitiveType ~ ident <~ "[" <~ "]" ^^ {
+    case pType~name => PrimitiveArrayParameter(pType,name)
+  } 
+
+  def block:Parser[Block] = {
+    println("block")
+    "{" ~> rep(varDeclaration) ~ statements <~ "}" ^^ {
+      case varDeclarations ~ statements => Block(varDeclarations,statements)
+    }
+  }
+  
+  def statements:Parser[List[Statement]] = {
+    rep(statement)
+  }
+
+  def statement:Parser[Statement] =  "_" ^^ { 
+    case _ => Statement()
+  }
 
   def parseTokens[T <: lexical.Scanner](tokens:T) = program(tokens)
 

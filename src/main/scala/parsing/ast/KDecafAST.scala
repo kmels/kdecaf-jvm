@@ -45,10 +45,13 @@ case class KArray[U <: VarType[_]](val value:Array[U]) extends TypeConstructor[A
 
 case class Struct(val value:List[VarDeclaration]) extends TypeConstructor[List[VarDeclaration]]
 
-case class Parameter(val varType:PrimitiveType[_], val name:String)
+abstract class Parameter 
 
-case class ArrayParameter(val varType:KArray[_ <: VarType[_]], val name:String)
+case class PrimitiveTypeParameter(val varType:PrimitiveType[_], val name:String) extends Parameter
+
+case class PrimitiveArrayParameter(val varType:PrimitiveType[_], val name:String) extends Parameter
 
 case class Block(val varDeclarations:List[VarDeclaration], val statements:List[Statement])
 
-abstract class Statement
+case class Statement
+
