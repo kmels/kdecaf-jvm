@@ -26,8 +26,11 @@ object KDecafParser extends StandardTokenParsers{
   def varDeclaration:Parser[VarDeclaration] = varArrayDeclaration | varType ~ ident <~ ";" ^^ { case varType~id => VarDeclaration(varType,id)} | structVarDeclaration | structConstructorVarDeclaration
 
   def structConstructorVarDeclaration:Parser[VarDeclaration] = structDeclaration ~ ident <~ ";" ^^ {
-    case structDeclaration~id => VarDeclaration(structDeclaration.value,id)
-  }
+      case structDeclaration~id => VarDeclaration(structDeclaration.value,id)
+    } | structDeclaration ~ ident ~ arraySizeDeclaration ^^ {
+      case structDeclaration~id~arraySie => VarDeclaration(structDeclaration.value,id)
+    }
+  
 
   def structVarDeclaration:Parser[VarDeclaration] = "struct" ~> ident ~ ident <~ ";" ^^ {
     case structName ~ id => VarDeclaration(struct(structName),id)
@@ -47,7 +50,7 @@ object KDecafParser extends StandardTokenParsers{
     case structName~varDeclarations => StructDeclaration(structName, Struct(varDeclarations))
   }
  
-  def varType[T <: AnyVal]:Parser[VarType[AnyVal]] = "int" ^^ { _ => int(0) } | "char" ^^ { _ => char(' ')} | "boolean" ^^ {_ => boolean(false)}// | "void" ^^ {_ => void({})} 
+  def varType:Parser[VarType[_]] = "int" ^^ { _ => int(0) } | "char" ^^ { _ => char(' ')} | "boolean" ^^ {_ => boolean(false)} | "void" ^^ {_ => void({})}
 
   def parseTokens[T <: lexical.Scanner](tokens:T) = program(tokens)
 
