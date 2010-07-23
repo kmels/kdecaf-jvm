@@ -4,10 +4,15 @@
  :server-host "localhost"
  :server-env ()
 
- :project-package "main"
+ :project-package "gui"
  :source ( :include("src/main/scala"))
  
  :use-sbt t
  :dependency-jars("lib")
  :target "target/classes"
+
+ :classpath("/home/kmels/.emacs.d/scala/ensime-0.0.13/lib/ensime.jar
+	    /home/kmels/.emacs.d/scala/ensime-0.0.13/lib/scala-library.jar"
+	    )
  )
+
