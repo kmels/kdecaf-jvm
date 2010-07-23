@@ -5,7 +5,8 @@ import org.scalatest.matchers.MustMatchers
 import scala.util.parsing.combinator.{lexical,syntactical}
 import lexical.Scanners
 import syntactical.StandardTokenParsers
-import parsing.{KDecafLexer,KDecafParser}
+import parsing.{KDecafParser}
+import parsing.lexical.KDecafLexer
 
 /**
  * A trait for testing parsers

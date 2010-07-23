@@ -1,7 +1,9 @@
 package parsing
 
-import scala.util.parsing.combinator.{syntactical,lexical}
-import syntactical.StandardTokenParsers
+import lexical.KDecafLexer
+import scala.util.parsing.combinator.{syntactical}
+import syntactical.{StandardTokenParsers}
+import scala.util.parsing.input.CharArrayReader.EofCh
 import ast._
 
 /**
@@ -72,11 +74,8 @@ class KDecafParser extends StandardTokenParsers{
     case pType~name => PrimitiveArrayParameter(pType,name)
   } 
 
-  def block:Parser[Block] = {
-    println("block")
-    "{" ~> rep(varDeclaration) ~ statements <~ "}" ^^ {
-      case varDeclarations ~ statements => Block(varDeclarations,statements)
-    }
+  def block:Parser[Block] = "{" ~> rep(varDeclaration) ~ statements <~ "}" ^^ {
+    case varDeclarations ~ statements => Block(varDeclarations,statements)
   }
   
   def statements:Parser[List[Statement]] =rep(statement)
@@ -109,16 +108,12 @@ class KDecafParser extends StandardTokenParsers{
     case loc ~ "=" ~ expr => Assignment(loc,expr)
   }
 
-  def expression:Parser[Expression] = {
-    println("expr!")
-    val r = "exp" ^^ { _ =>IntLiteral("1") }
-    r match {
-      case a:IntLiteral => println("yes!")
-      case _ => println("no!")
-    }
-    r
-  }
-  
+  def expression:Parser[Expression] = "exp" ^^ { _ =>IntLiteral("1") }
+
+  def literal:Parser[Literal[_]] = numericLit ^^ { IntLiteral(_)} | charLit | "true" ^^ { BoolLiteral(_)} | "false" ^^ { BoolLiteral(_)}
+
+  def charLit:Parser[CharLiteral] = elem("char", x => { x.isInstanceOf[lexical.CharLit] }) ^^ {c => CharLiteral(c.chars)}
+ 
   def location:Parser[Location] = ident ^^ { SimpleLocation(_)}
 
   def parseTokens[T <: lexical.Scanner](tokens:T) = program(tokens)

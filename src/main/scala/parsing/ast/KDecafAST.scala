@@ -78,13 +78,20 @@ case class ArrayLocation(val name:String, val index:Expression, val optionalMemb
 
 abstract class Literal[+T] extends Expression{
   val literal:String
+  val value: T
 } 
 
-case class IntLiteral(val literal:String) extends Literal[Int]
+case class IntLiteral(val literal:String) extends Literal[Int]{
+  val value = literal.toInt
+}
 
-case class CharLiteral(val literal:String) extends Literal[Char]
+case class CharLiteral(val literal:String) extends Literal[Char]{
+  val value = literal.charAt(0)
+}
 
-case class BoolLiteral(val literal:String) extends Literal[Boolean]
+case class BoolLiteral(val literal:String) extends Literal[Boolean]{
+  val value = literal.toBoolean
+}
 
 abstract class Expression extends Statement
 
