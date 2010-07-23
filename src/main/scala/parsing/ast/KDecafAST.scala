@@ -14,7 +14,7 @@ case class Program(val name:String, val declarations:List[Declaration]) extends 
   override def toString = "Program("+name+","+declarations.mkString("\n")+")"
 }
 
-abstract class Declaration
+abstract class Declaration extends KDecafAST
 
 case class VarDeclaration(val varType:VarType[_], val id:String) extends Declaration
 

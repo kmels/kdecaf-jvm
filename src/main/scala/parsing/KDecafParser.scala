@@ -12,7 +12,7 @@ import ast._
  * @since 1.0
  */ 
 
-object KDecafParser extends StandardTokenParsers{  
+class KDecafParser extends StandardTokenParsers{  
   override val lexical = new KDecafLexer
   
   def program:Parser[Program] = "class" ~> ident ~ declarations ^^ { case programName~declarations => Program(programName,declarations)}
