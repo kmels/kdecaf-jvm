@@ -11,8 +11,8 @@
  :dependency-jars("lib")
  :target "target/classes"
 
- :classpath("/home/kmels/.emacs.d/scala/ensime-0.0.13/lib/ensime.jar
-	    /home/kmels/.emacs.d/scala/ensime-0.0.13/lib/scala-library.jar"
+ :classpath("/home/kmels/.emacs.d/scala/ensime-0.0.13/lib/ensime.jar"
+	    "/home/kmels/.emacs.d/scala/ensime-0.0.13/lib/scala-library.jar"
 	    )
  )
 
