@@ -81,17 +81,46 @@ object KDecafParser extends StandardTokenParsers{
   
   def statements:Parser[List[Statement]] =rep(statement)
 
-  def statement:Parser[Statement] =  "_" ^^ { 
-    case _ => Statement()
+  def statement:Parser[Statement] = ifStatement | whileStatement | returnStatement | methodCall <~ ";" | block | assignment | expression <~ ";"
+
+  def parenthesisExpression:Parser[Expression] = "(" ~> expression <~ ")"
+
+  def arguments:Parser[List[Expression]] = "(" ~> repsep(expression,",") <~ ")"
+
+  def ifStatement:Parser[IfStatement] = ifElseStatement | "if" ~> parenthesisExpression ~ block ^^ {
+    case expr ~ ifBlock => IfStatement(expr,ifBlock)
   }
 
-/*  def ifStatement:Parser[IfStatement] 
+  def ifElseStatement:Parser[IfStatement] = "if" ~> parenthesisExpression ~ block ~ "else" ~ block ^^ {
+    case expr ~ ifBlock ~ "else" ~ elseBlock => IfStatement(expr,ifBlock,Some(elseBlock))
+  }
 
-  def ifElseStatement:Parser[IfElseStatement]
+  def whileStatement:Parser[WhileStatement] = "while" ~> parenthesisExpression ~ block ^^ {
+    case expression_ ~ block => WhileStatement(expression_,block)
+  }
 
-  def whileStatement:Parser[WhileStatement]
+  def returnStatement:Parser[ReturnStatement] = "return" ~> opt(expression) <~ ";" ^^ { ReturnStatement(_) }
 
-  def */
+  def methodCall:Parser[MethodCall] = ident ~ arguments ^^ {
+    case id~args => MethodCall(id,args)
+  }
+
+  def assignment:Parser[Assignment] = location ~ "=" ~ expression ^^ {
+    case loc ~ "=" ~ expr => Assignment(loc,expr)
+  }
+
+  def expression:Parser[Expression] = {
+    println("expr!")
+    val r = "exp" ^^ { _ =>IntLiteral("1") }
+    r match {
+      case a:IntLiteral => println("yes!")
+      case _ => println("no!")
+    }
+    r
+  }
+  
+  def location:Parser[Location] = ident ^^ { SimpleLocation(_)}
+
   def parseTokens[T <: lexical.Scanner](tokens:T) = program(tokens)
 
   def parse(s:String) = {

@@ -6,7 +6,7 @@ import scala.collection.mutable.HashSet
 class KDecafLexer extends StdLexical{
 //  override def token:Parser[Token] = super.token 
   
-  reserved ++= Set("class","struct","true","false","void","if","else","while","return","int","char","boolean")
+  reserved ++= Set("class","struct","true","false","void","if","else","while","return","int","char","boolean","exp")
 
   override val delimiters = new HashSet[String] ++ Set("{","}",";","[","]","(",")",",","_")  
 }

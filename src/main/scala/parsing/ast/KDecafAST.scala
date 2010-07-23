@@ -51,7 +51,7 @@ case class PrimitiveTypeParameter(val varType:PrimitiveType[_], val name:String)
 
 case class PrimitiveArrayParameter(val varType:PrimitiveType[_], val name:String) extends Parameter
 
-case class Block(val varDeclarations:List[VarDeclaration], val statements:List[Statement])
+case class Block(val varDeclarations:List[VarDeclaration], val statements:List[Statement]) extends Statement
 
 abstract class Statement
 
@@ -60,13 +60,15 @@ trait ConditionStatement extends Statement{
   val codeBlock:Block
 }
 
-case class IfStatement(val expression:Expression,val codeBlock:Block) extends ConditionStatement
+case class IfStatement(val expression:Expression,val codeBlock:Block, val elseBlock:Option[Block] = None) extends ConditionStatement
 
-case class IfElseStatement(val expression:Expression,val ifCodeBlock:Block,val elseCodeBlock:Block)
+case class WhileStatement(val expression:Expression,val codeBlock:Block) extends ConditionStatement
 
-case class WhileStatement(val expression:Expression,val codeBlock:Block)
+case class MethodCall(val name:String,val arguments:List[Expression]) extends Expression 
 
-case class MethodCall(val name:String,val arguments:List[Argument]) extends Expression
+case class ReturnStatement(val expression:Option[Expression]) extends Statement
+
+case class Assignment(val location:Location,val expression:Expression) extends Statement
 
 abstract class Location extends Expression
 
@@ -84,9 +86,7 @@ case class CharLiteral(val literal:String) extends Literal[Char]
 
 case class BoolLiteral(val literal:String) extends Literal[Boolean]
 
-case class Argument(val expression:Expression)
-
-abstract class Expression
+abstract class Expression extends Statement
 
 abstract class Operator[T]{
   val lexeme:T
