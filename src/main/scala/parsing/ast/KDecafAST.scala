@@ -53,5 +53,49 @@ case class PrimitiveArrayParameter(val varType:PrimitiveType[_], val name:String
 
 case class Block(val varDeclarations:List[VarDeclaration], val statements:List[Statement])
 
-case class Statement
+abstract class Statement
 
+trait ConditionStatement extends Statement{
+  val expression:Expression
+  val codeBlock:Block
+}
+
+case class IfStatement(val expression:Expression,val codeBlock:Block) extends ConditionStatement
+
+case class IfElseStatement(val expression:Expression,val ifCodeBlock:Block,val elseCodeBlock:Block)
+
+case class WhileStatement(val expression:Expression,val codeBlock:Block)
+
+case class MethodCall(val name:String,val arguments:List[Argument]) extends Expression
+
+abstract class Location extends Expression
+
+case class SimpleLocation(val name:String, val optionalMember:Option[Location] = None) extends Location
+
+case class ArrayLocation(val name:String, val index:Expression, val optionalMember:Option[Location] = None) extends Location
+
+abstract class Literal[+T] extends Expression{
+  val literal:String
+} 
+
+case class IntLiteral(val literal:String) extends Literal[Int]
+
+case class CharLiteral(val literal:String) extends Literal[Char]
+
+case class BoolLiteral(val literal:String) extends Literal[Boolean]
+
+case class Argument(val expression:Expression)
+
+abstract class Expression
+
+abstract class Operator[T]{
+  val lexeme:T
+}
+
+case class ArithmeticOperator(val lexeme:Char) extends Operator[Char]
+
+case class InequalityOperator(val lexeme:String) extends Operator[String]
+
+case class EqualityOperator(val lexeme:String) extends Operator[String]
+
+case class ConditionalOperator(val lexeme:String) extends Operator[String]

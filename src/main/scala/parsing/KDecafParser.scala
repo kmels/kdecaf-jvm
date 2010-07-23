@@ -79,14 +79,19 @@ object KDecafParser extends StandardTokenParsers{
     }
   }
   
-  def statements:Parser[List[Statement]] = {
-    rep(statement)
-  }
+  def statements:Parser[List[Statement]] =rep(statement)
 
   def statement:Parser[Statement] =  "_" ^^ { 
     case _ => Statement()
   }
 
+/*  def ifStatement:Parser[IfStatement] 
+
+  def ifElseStatement:Parser[IfElseStatement]
+
+  def whileStatement:Parser[WhileStatement]
+
+  def */
   def parseTokens[T <: lexical.Scanner](tokens:T) = program(tokens)
 
   def parse(s:String) = {
