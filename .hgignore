@@ -5,6 +5,7 @@ project/boot
 syntax: glob
 target/
 lib/
+lib_managed/
 syntax:regexp
 .DS_Store$
 syntax: glob
