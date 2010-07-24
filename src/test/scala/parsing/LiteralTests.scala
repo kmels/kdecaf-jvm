@@ -19,9 +19,6 @@ class LiteralTests extends ParserTest[Literal[_]] with FunSuite{
 
     input = "0"
     result must be (Some(IntLiteral("0")))
-
-    //input = "0.0"
-    //result must be (None)
   }
 
   test ("Boolean literals"){
@@ -39,7 +36,7 @@ class LiteralTests extends ParserTest[Literal[_]] with FunSuite{
     input = "'e'"
     result must be (Some(CharLiteral("e")))
 
-    //input = "' '"
-    //result must be (Some(CharLiteral(" ")))
+    input = "'m'"
+    result must be (Some(CharLiteral("m")))
   }
 }

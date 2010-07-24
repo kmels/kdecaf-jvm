@@ -108,13 +108,23 @@ class KDecafParser extends StandardTokenParsers{
     case loc ~ "=" ~ expr => Assignment(loc,expr)
   }
 
-  def expression:Parser[Expression] = "exp" ^^ { _ =>IntLiteral("1") }
+  def expression:Parser[Expression] =  methodCall | location | literal
 
   def literal:Parser[Literal[_]] = numericLit ^^ { IntLiteral(_)} | charLit | "true" ^^ { BoolLiteral(_)} | "false" ^^ { BoolLiteral(_)}
 
   def charLit:Parser[CharLiteral] = elem("char", x => { x.isInstanceOf[lexical.CharLit] }) ^^ {c => CharLiteral(c.chars)}
  
-  def location:Parser[Location] = ident ^^ { SimpleLocation(_)}
+  def location:Parser[Location] = arrayLocation | ident ~ optionalLocation ^^ { 
+    case id~optLocation => SimpleLocation(id,optLocation)
+  } 
+
+  def optionalLocation:Parser[Option[Location]] = opt("." ~> location)
+
+  def arrayLocation:Parser[Location] = ident ~ arrayLocationExpression ~ optionalLocation ^^ {
+    case id~exp~optLocation => ArrayLocation(id,exp,optLocation)
+  }
+ 
+  def arrayLocationExpression:Parser[Expression] = "[" ~> expression <~ "]"
 
   def parseTokens[T <: lexical.Scanner](tokens:T) = program(tokens)
 
