@@ -24,5 +24,5 @@ class KDecafLexer extends StdLexical{
 
   reserved ++= Set("class","struct","true","false","void","if","else","while","return","int","char","boolean")
 
-  override val delimiters = new HashSet[String] ++ Set("{","}",";","[","]","(",")",",","_","'",".","+","-","*","/","%")
+  override val delimiters = new HashSet[String] ++ Set("{","}",";","[","]","(",")",",","_","'",".","+","-","*","/","%","&&","||","<=","<",">",">=","==","!=")
 }

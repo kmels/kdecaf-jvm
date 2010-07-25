@@ -14,7 +14,6 @@ import ast._
  * @version 1.0
  * @since 1.0
  */ 
-
 class KDecafParser extends StandardTokenParsers with PackratParsers{  
   override val lexical = new KDecafLexer
   
@@ -109,9 +108,31 @@ class KDecafParser extends StandardTokenParsers with PackratParsers{
     case loc ~ "=" ~ expr => Assignment(loc,expr)
   }
 
-  lazy val expression:PackratParser[Expression] = expressionOperation
+  lazy val expression:PackratParser[Expression] = expressionOperation ~ opt(
+    ("&&"|"||") ~ expression 
+  ) ^^ {
+    case exp ~ None => exp
+    case exp1 ~ Some(expressionWithOperator) => expressionWithOperator match{
+      case "&&" ~ exp2 => ExpressionAnd(exp1,exp2)
+      case "||" ~ exp2 => ExpressionOr(exp1,exp2)
+    }
+  }
 
-  lazy val expressionOperation:PackratParser[Expression] = expressionSum 
+  lazy val expressionOperation:PackratParser[Expression] = expressionSum ~ opt(
+    ("<="|"<"|">"|">="|"=="|"!=") ~ expressionSum
+  ) ^^ {
+    case exp ~ None => exp
+    case exp1 ~ Some(comparedExpression) => comparedExpression match{
+      case compareSymbol ~ exp2 => compareSymbol match{
+	case "<=" => ExpressionLessOrEquals(exp1,exp2)
+	case "<" => ExpressionLess(exp1,exp2)
+	case ">" => ExpressionGreater(exp1,exp2)
+	case ">=" => ExpressionGreaterOrEquals(exp1,exp2)
+	case "==" => ExpressionEquals(exp1,exp2)
+	case "!=" => ExpressionNotEquals(exp1,exp2)
+      }
+    }
+  }
 
   lazy val expressionSum:PackratParser[Expression] = expressionMult ~ opt( 
     ("+"|"-") ~ expressionSum 
@@ -160,7 +181,6 @@ class KDecafParser extends StandardTokenParsers with PackratParsers{
   def parse(s:String) = {
     val tokens = new lexical.Scanner(s)
     val packratReader = new PackratReader(tokens)
-//    parseTokens(packratReader)
     program(packratReader)
   }
 }

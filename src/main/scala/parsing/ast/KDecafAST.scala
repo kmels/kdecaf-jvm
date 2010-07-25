@@ -80,15 +80,12 @@ abstract class Literal[+T] extends Expression{
   val literal:String
   val value: T
 } 
-
 case class IntLiteral(val literal:String) extends Literal[Int]{
   val value = literal.toInt
 }
-
 case class CharLiteral(val literal:String) extends Literal[Char]{
   val value = literal.charAt(0)
 }
-
 case class BoolLiteral(val literal:String) extends Literal[Boolean]{
   val value = literal.toBoolean
 }
@@ -109,21 +106,27 @@ case class ConditionalOperator(val lexeme:String) extends Operator[String]
 
 trait ExpressionOperation extends Expression
 
-trait BinaryOperation extends ExpressionOperation
+trait BinaryOperation[+T] extends ExpressionOperation
 
 trait UnaryOperation extends ExpressionOperation
 
-case class ExpressionAdd(val exp1:Expression,val exp2:Expression) extends BinaryOperation
+case class ExpressionAdd(val exp1:Expression,val exp2:Expression) extends BinaryOperation[Int]
+case class ExpressionSub(val exp1:Expression,val exp2:Expression) extends BinaryOperation[Int]
+case class ExpressionMult(val exp1:Expression, val exp2:Expression) extends BinaryOperation[Int]
+case class ExpressionDiv(val exp1:Expression, val exp2:Expression) extends BinaryOperation[Int]
+case class ExpressionMod(val exp1:Expression, val exp2:Expression) extends BinaryOperation[Int]
 
-case class ExpressionSub(val exp1:Expression,val exp2:Expression) extends BinaryOperation
+case class ExpressionAnd(val exp1:Expression, val exp2:Expression) extends BinaryOperation[Boolean]
+case class ExpressionOr(val exp1:Expression, val exp2:Expression) extends BinaryOperation[Boolean]
 
-case class ExpressionMult(val exp1:Expression, val exp2:Expression) extends BinaryOperation
+case class ExpressionLessOrEquals(val exp1:Expression, val exp2:Expression) extends BinaryOperation[Boolean]
+case class ExpressionLess(val exp1:Expression, val exp2:Expression) extends BinaryOperation[Boolean]
+case class ExpressionGreater(val exp1:Expression, val exp2:Expression) extends BinaryOperation[Boolean]
+case class ExpressionGreaterOrEquals(val exp1:Expression, val exp2:Expression) extends BinaryOperation[Boolean]
+case class ExpressionEquals(val exp1:Expression, val exp2:Expression) extends BinaryOperation[Boolean]
+case class ExpressionNotEquals(val exp1:Expression, val exp2:Expression) extends BinaryOperation[Boolean]
 
-case class ExpressionDiv(val exp1:Expression, val exp2:Expression) extends BinaryOperation
 
-case class ExpressionMod(val exp1:Expression, val exp2:Expression) extends BinaryOperation
-
-case class NegativeExpression(val exp:Expression) extends UnaryOperation 
-
+case class NegativeExpression(val exp:Expression) extends UnaryOperation
 case class NotExpression(val exp:Expression) extends UnaryOperation
 
