@@ -4,7 +4,6 @@ import org.scalatest.FunSuite
 import org.scalatest.matchers.MustMatchers
 import scala.util.parsing.combinator.{lexical,syntactical}
 import lexical.Scanners
-import syntactical.StandardTokenParsers
 import parsing.{KDecafParser}
 import parsing.lexical.KDecafLexer
 
@@ -18,15 +17,30 @@ import parsing.lexical.KDecafLexer
 
 trait ParserTest[T] extends KDecafParser with MustMatchers{
   var input:String = ""
-  val parser:Parser[T]
+  val parser:PackratParser[T]
+
+  def accept = (in:String) => {
+    input = in
+    val accepted = result match {
+      case Some(_) => true
+      case _ => false
+    }
+    accepted must be (true)
+  }
 
   def parseResult:ParseResult[T] = {
     val tokens = new lexical.Scanner(input)
-    parser(tokens)
+    val packratReader = new PackratReader(tokens)
+    parser(packratReader)
   }
 
   def result:Option[T] = parseResult match{
-    case Success(ast,_) => Some(ast)
+    case Success(ast,next) => next.atEnd match{
+      case true => Some(ast)
+      case rest => {
+	None
+      }
+    }
     case _ => None
   }
 

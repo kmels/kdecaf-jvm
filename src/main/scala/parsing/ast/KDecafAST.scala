@@ -106,3 +106,24 @@ case class InequalityOperator(val lexeme:String) extends Operator[String]
 case class EqualityOperator(val lexeme:String) extends Operator[String]
 
 case class ConditionalOperator(val lexeme:String) extends Operator[String]
+
+trait ExpressionOperation extends Expression
+
+trait BinaryOperation extends ExpressionOperation
+
+trait UnaryOperation extends ExpressionOperation
+
+case class ExpressionAdd(val exp1:Expression,val exp2:Expression) extends BinaryOperation
+
+case class ExpressionSub(val exp1:Expression,val exp2:Expression) extends BinaryOperation
+
+case class ExpressionMult(val exp1:Expression, val exp2:Expression) extends BinaryOperation
+
+case class ExpressionDiv(val exp1:Expression, val exp2:Expression) extends BinaryOperation
+
+case class ExpressionMod(val exp1:Expression, val exp2:Expression) extends BinaryOperation
+
+case class NegativeExpression(val exp:Expression) extends UnaryOperation 
+
+case class NotExpression(val exp:Expression) extends UnaryOperation
+

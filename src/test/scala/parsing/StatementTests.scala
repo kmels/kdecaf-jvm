@@ -12,7 +12,7 @@ import parsing.ast._
  */ 
 
 class StatementTests extends ParserTest[Statement] with FunSuite{
-  val parser:Parser[Statement] = statement
+  val parser:PackratParser[Statement] = statement
 
   test("If statement #1") {
     /*input = """if (exp) {

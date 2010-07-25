@@ -4,8 +4,6 @@ object Main extends Application{
   import util.parsing.combinator.{lexical,syntactical}
   import syntactical._
   import lexical._
-//  val tokens = new lexical.Scanner(input)
-//  println("Tokens: \n"+tokens+"\n\n")
   val result = new parsing.KDecafParser() parse(input)
   println("AST: \n"+result+"\n\n")
 }

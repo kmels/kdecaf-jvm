@@ -1,7 +1,8 @@
 package parsing
 
 import lexical.KDecafLexer
-import scala.util.parsing.combinator.{syntactical}
+
+import scala.util.parsing.combinator.{syntactical,PackratParsers}
 import syntactical.{StandardTokenParsers}
 import scala.util.parsing.input.CharArrayReader.EofCh
 import ast._
@@ -14,32 +15,32 @@ import ast._
  * @since 1.0
  */ 
 
-class KDecafParser extends StandardTokenParsers{  
+class KDecafParser extends StandardTokenParsers with PackratParsers{  
   override val lexical = new KDecafLexer
   
-  def program:Parser[Program] = "class" ~> ident ~ declarations ^^ { case programName~declarations => Program(programName,declarations)}
+  lazy val program:PackratParser[Program] = "class" ~> ident ~ declarations ^^ { case programName~declarations => Program(programName,declarations)}
 
-  def declarations:Parser[List[Declaration]] = "{" ~> rep(declaration) <~ "}"
+  lazy val declarations:PackratParser[List[Declaration]] = "{" ~> rep(declaration) <~ "}"
 
-  def declaration:Parser[Declaration] = varDeclaration | structDeclaration | methodDeclaration 
+  lazy val declaration:PackratParser[Declaration] = varDeclaration | structDeclaration | methodDeclaration 
 
-  def varDeclarations:Parser[List[VarDeclaration]] = "{" ~> rep(varDeclaration) <~ "}"
+  lazy val varDeclarations:PackratParser[List[VarDeclaration]] = "{" ~> rep(varDeclaration) <~ "}"
 
-  def varDeclaration:Parser[VarDeclaration] = varArrayDeclaration | varType ~ ident <~ ";" ^^ { 
+  lazy val varDeclaration:PackratParser[VarDeclaration] = varArrayDeclaration | varType ~ ident <~ ";" ^^ { 
     case varType~id => VarDeclaration(varType,id)
   } | structVarDeclaration | structConstructorVarDeclaration
 
-  def structConstructorVarDeclaration:Parser[VarDeclaration] = structDeclaration ~ ident <~ ";" ^^ {
+  lazy val structConstructorVarDeclaration:PackratParser[VarDeclaration] = structDeclaration ~ ident <~ ";" ^^ {
     case structDeclaration~id => VarDeclaration(structDeclaration.value,id)
   } | structDeclaration ~ ident ~ arraySizeDeclaration ^^ {
     case structDeclaration~id~arraySie => VarDeclaration(structDeclaration.value,id)
   }
   
-  def structVarDeclaration:Parser[VarDeclaration] = "struct" ~> ident ~ ident <~ ";" ^^ {
+  lazy val structVarDeclaration:PackratParser[VarDeclaration] = "struct" ~> ident ~ ident <~ ";" ^^ {
     case structName ~ id => VarDeclaration(struct(structName),id)
   }
   
-  def varArrayDeclaration:Parser[VarDeclaration] = varType ~ ident ~ arraySizeDeclaration ^^ {
+  lazy val varArrayDeclaration:PackratParser[VarDeclaration] = varType ~ ident ~ arraySizeDeclaration ^^ {
     case varType~id~arraySize => 
       VarDeclaration(
 	KArray(Array.fill(arraySize)(varType)) //varType has it's value set to default value
@@ -47,90 +48,119 @@ class KDecafParser extends StandardTokenParsers{
       )      
   }
 
-  def arraySizeDeclaration:Parser[Int] = "[" ~> numericLit <~ "]" <~ ";" ^^ (_.toInt)
+  lazy val arraySizeDeclaration:PackratParser[Int] = "[" ~> numericLit <~ "]" <~ ";" ^^ (_.toInt)
   
-  def structDeclaration:Parser[StructDeclaration] = "struct" ~> ident ~ varDeclarations ^^ { 
+  lazy val structDeclaration:PackratParser[StructDeclaration] = "struct" ~> ident ~ varDeclarations ^^ { 
     case structName~varDeclarations => StructDeclaration(structName, Struct(varDeclarations))
   }
   
-  def varType:Parser[VarType[_]] = primitiveType | "void" ^^ {
+  lazy val varType:PackratParser[VarType[_]] = primitiveType | "void" ^^ {
     _ => void({})
   }
 
-  def primitiveType:Parser[PrimitiveType[_]] = "int" ^^ { _ => int(0) } | "char" ^^ { _ => char(' ')} | "boolean" ^^ {_ => boolean(false)}
+  lazy val primitiveType:PackratParser[PrimitiveType[_]] = "int" ^^ { _ => int(0) } | "char" ^^ { _ => char(' ')} | "boolean" ^^ {_ => boolean(false)}
 
-  def methodDeclaration:Parser[MethodDeclaration] = varType ~ ident ~ parameterList ~ block ^^ {
+  lazy val methodDeclaration:PackratParser[MethodDeclaration] = varType ~ ident ~ parameterList ~ block ^^ {
     case methodType~name~parameters~codeBlock =>  MethodDeclaration(methodType,name,parameters,codeBlock) 
   }
 
-  def parameterList:Parser[List[Parameter]] = {
+  lazy val parameterList:PackratParser[List[Parameter]] = {
     println("parameter list")
     "(" ~> repsep(parameter,",") <~ ")"
   }
 
-  def parameter:Parser[Parameter] = primitiveType ~ ident ^^ {
+  lazy val parameter:PackratParser[Parameter] = primitiveType ~ ident ^^ {
     case pType~name => PrimitiveTypeParameter(pType,name)
   } | primitiveType ~ ident <~ "[" <~ "]" ^^ {
     case pType~name => PrimitiveArrayParameter(pType,name)
   } 
 
-  def block:Parser[Block] = "{" ~> rep(varDeclaration) ~ statements <~ "}" ^^ {
+  lazy val block:PackratParser[Block] = "{" ~> rep(varDeclaration) ~ statements <~ "}" ^^ {
     case varDeclarations ~ statements => Block(varDeclarations,statements)
   }
   
-  def statements:Parser[List[Statement]] =rep(statement)
+  lazy val statements:PackratParser[List[Statement]] =rep(statement)
 
-  def statement:Parser[Statement] = ifStatement | whileStatement | returnStatement | methodCall <~ ";" | block | assignment | expression <~ ";"
+  lazy val statement:PackratParser[Statement] = ifStatement | whileStatement | returnStatement | methodCall <~ ";" | block | assignment | expression <~ ";"
 
-  def parenthesisExpression:Parser[Expression] = "(" ~> expression <~ ")"
+  lazy val parenthesisExpression:PackratParser[Expression] = "(" ~> expression <~ ")"
 
-  def arguments:Parser[List[Expression]] = "(" ~> repsep(expression,",") <~ ")"
+  lazy val arguments:PackratParser[List[Expression]] = "(" ~> repsep(expression,",") <~ ")"
 
-  def ifStatement:Parser[IfStatement] = ifElseStatement | "if" ~> parenthesisExpression ~ block ^^ {
+  lazy val ifStatement:PackratParser[IfStatement] = ifElseStatement | "if" ~> parenthesisExpression ~ block ^^ {
     case expr ~ ifBlock => IfStatement(expr,ifBlock)
   }
 
-  def ifElseStatement:Parser[IfStatement] = "if" ~> parenthesisExpression ~ block ~ "else" ~ block ^^ {
+  lazy val ifElseStatement:PackratParser[IfStatement] = "if" ~> parenthesisExpression ~ block ~ "else" ~ block ^^ {
     case expr ~ ifBlock ~ "else" ~ elseBlock => IfStatement(expr,ifBlock,Some(elseBlock))
   }
 
-  def whileStatement:Parser[WhileStatement] = "while" ~> parenthesisExpression ~ block ^^ {
+  lazy val whileStatement:PackratParser[WhileStatement] = "while" ~> parenthesisExpression ~ block ^^ {
     case expression_ ~ block => WhileStatement(expression_,block)
   }
 
-  def returnStatement:Parser[ReturnStatement] = "return" ~> opt(expression) <~ ";" ^^ { ReturnStatement(_) }
+  lazy val returnStatement:PackratParser[ReturnStatement] = "return" ~> opt(expression) <~ ";" ^^ { ReturnStatement(_) }
 
-  def methodCall:Parser[MethodCall] = ident ~ arguments ^^ {
+  lazy val methodCall:PackratParser[MethodCall] = ident ~ arguments ^^ {
     case id~args => MethodCall(id,args)
   }
 
-  def assignment:Parser[Assignment] = location ~ "=" ~ expression ^^ {
+  lazy val assignment:PackratParser[Assignment] = location ~ "=" ~ expression ^^ {
     case loc ~ "=" ~ expr => Assignment(loc,expr)
   }
 
-  def expression:Parser[Expression] =  methodCall | location | literal
+  lazy val expression:PackratParser[Expression] = expressionOperation
 
-  def literal:Parser[Literal[_]] = numericLit ^^ { IntLiteral(_)} | charLit | "true" ^^ { BoolLiteral(_)} | "false" ^^ { BoolLiteral(_)}
+  lazy val expressionOperation:PackratParser[Expression] = expressionSum 
 
-  def charLit:Parser[CharLiteral] = elem("char", x => { x.isInstanceOf[lexical.CharLit] }) ^^ {c => CharLiteral(c.chars)}
+  lazy val expressionSum:PackratParser[Expression] = expressionMult ~ opt( 
+    ("+"|"-") ~ expressionSum 
+  ) ^^ {
+    case exp ~ None => exp
+    case exp1 ~ Some(exp2WithOperator) => exp2WithOperator match{
+      case "+" ~ exp2 => ExpressionAdd(exp1,exp2)
+      case "-" ~ exp2 => ExpressionSub(exp1,exp2)
+    } 
+  }
+
+  lazy val expressionMult:PackratParser[Expression] = unaryOperationExpression ~ opt( 
+    ("*"|"/"|"%") ~ expressionMult
+  ) ^^ {
+    case exp ~ None => exp
+    case exp1 ~ Some(exp2WithOperator) => exp2WithOperator match{
+      case "*" ~ exp2 => ExpressionMult(exp1,exp2)
+      case "%" ~ exp2 => ExpressionMod(exp1,exp2)
+      case "/" ~ exp2 => ExpressionDiv(exp1,exp2)
+    }
+  }
+   
+  lazy val unaryOperationExpression :PackratParser[Expression] = simpleExpression
+
+  //expression without operations
+  lazy val simpleExpression:PackratParser[Expression] = literal | "(" ~> expression <~ ")" | methodCall | location
+
+  lazy val literal:PackratParser[Literal[_]] = numericLit ^^ { IntLiteral(_)} | charLit | "true" ^^ { BoolLiteral(_)} | "false" ^^ { BoolLiteral(_)}
+
+  lazy val charLit:PackratParser[CharLiteral] = elem("char", x => { x.isInstanceOf[lexical.CharLit] }) ^^ {c => CharLiteral(c.chars)}
  
-  def location:Parser[Location] = arrayLocation | ident ~ optionalLocation ^^ { 
+  lazy val location:PackratParser[Location] = arrayLocation | ident ~ optionalLocation ^^ { 
     case id~optLocation => SimpleLocation(id,optLocation)
   } 
 
-  def optionalLocation:Parser[Option[Location]] = opt("." ~> location)
+  lazy val optionalLocation:PackratParser[Option[Location]] = opt("." ~> location)
 
-  def arrayLocation:Parser[Location] = ident ~ arrayLocationExpression ~ optionalLocation ^^ {
+  lazy val arrayLocation:PackratParser[Location] = ident ~ arrayLocationExpression ~ optionalLocation ^^ {
     case id~exp~optLocation => ArrayLocation(id,exp,optLocation)
   }
  
-  def arrayLocationExpression:Parser[Expression] = "[" ~> expression <~ "]"
+  lazy val arrayLocationExpression:PackratParser[Expression] = "[" ~> expression <~ "]"
 
   def parseTokens[T <: lexical.Scanner](tokens:T) = program(tokens)
 
   def parse(s:String) = {
     val tokens = new lexical.Scanner(s)
-    println(tokens)
-    parseTokens(tokens)
+    val packratReader = new PackratReader(tokens)
+//    parseTokens(packratReader)
+    program(packratReader)
   }
 }
