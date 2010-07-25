@@ -14,20 +14,65 @@ import parsing.ast._
 class StatementTests extends ParserTest[Statement] with FunSuite{
   val parser:PackratParser[Statement] = statement
 
-  test("If statement #1") {
-    /*input = """if (exp) {
+  test("If statements 1") {
+    input = """if (exp) {
       exp;
     }"""
-
-    success must be (true)
+    accept (input)
     
-    val expected = new IfStatement(
-      SimpleLocation("exp"),
-      Block(List(),List(SimpleLocation("exp")))
-    )*/
-
-    //result must be (Some(expected))
+    input = """if (exp){
+      method1();
+    }      
+    else{
+      method2();
+    }"""
+    accept(input)
   }
 
-  input = "if (1) else (2)"
+  test("while statements"){
+    input = """
+      while(exp){
+	if (exp2){
+	  method3();
+	}
+      }
+    """
+    accept(input)
+  }
+
+  test("return statements"){
+    //return statement
+    accept("return id[2];")
+    accept("return exp.member;")
+  }
+    
+  test("assignment"){
+    accept("x = b")
+  }
+   
+  test("misc statements"){
+    input = """{
+      struct s1 id2;
+      int a1;
+    
+      struct s1{
+	int m;
+      } id [20];
+      
+      if (s1.m == s2.m){
+	m();
+      }
+    }"""
+    accept(input)
+  }
+  /*
+   
+   
+   if (s1.m == s1.m){
+   methodX();
+   }
+   
+      
+*/
+  //input = "if (1) else (2)"
 }

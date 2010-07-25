@@ -38,6 +38,8 @@ trait ParserTest[T] extends KDecafParser with MustMatchers{
     case Success(ast,next) => next.atEnd match{
       case true => Some(ast)
       case rest => {
+	println("parsed: "+ast)
+	println("rest: "+rest)
 	None
       }
     }
