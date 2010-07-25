@@ -107,21 +107,50 @@ literal             ::=  numericLit
                        | charLit 
                        | 'false' 
                        | 'true'
-location            ::=  ident '[' expression ']' optLocation
-                       | ident optLocation
-optLocation         ::=  ['.' location]
+location            ::=  ident '[' expression ']' ['.' location]
+                       | ident ['.' location] 
 \end{lstlisting}
 
-\section*{Sistema de tipos: Reglas sem\'{a}nticas}
+\section*{Sistema de tipos}
 \subsection*{Axiomas}
+
+\textbf{Cualquier literal es de tipo varType}
 \begin{lstlisting}
 literal -> numericLit
 { literal.type = int;
-  literal.value = numericLit }
+  literal.value = numericLit.lexema }
 literal -> charLit
-{ literal.type = CharLiteral }
+{ literal.type = char;
+  literal.value = charLit.lexema.charAt(0) }
 literal -> 'false' | 'true'
-{ literal.type = BoolLiteral }
+{ literal.type = boolean;
+  literal.value = lexema.toBoolean }
 \end{lstlisting}
+
+\subsection*{Reglas sem\'{a}nticas}
+\textbf{Identificadores}
+\begin{lstlisting}
+{ assert(exists(ident));
+  location = lookUp(ident); }  
+\end{lstlisting}
+
+\begin{lstlisting}
+location -> ident '[' expression ']' 
+{ assert(lookUp(ident).isInstanceOf[KArray]);
+  assert(expression.isInstanceOf[int]);
+  location = lookUp(ident).getUnderlyingType }
+\end{lstlisting}
+
+\begin{lstlisting}
+location -> ident '[' expression ']' '.' location2
+{ assert(lookUp(ident).isInstanceOf[KArray]);  
+  assert(expression.isInstanceOf[int]);
+  val s = lookup(ident).getUnderlyingType
+  assert(s.isInstanceOf[Struct])
+  val = varDeclarations = s.varDeclarations
+  assert(varDeclarations.exists(_.id == location2.literal));
+  location = T.find(_.id == location2).get }
+\end{lstlisting}
+
 
 \end{document}
