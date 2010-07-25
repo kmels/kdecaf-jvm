@@ -12,8 +12,10 @@ import parsing.ast._
  */ 
 class ExpressionTests extends ParserTest[Expression] with FunSuite{
   val parser = expression
-  implicit def int2IntLiteral(i:Int):IntLiteral = IntLiteral(i.toString)
-  
+  implicit def intWrapper(i:Int):int = int(i)
+  implicit def charWrapper(c:Char):char = char(c)
+  implicit def boolWrapper(b:Boolean):boolean = boolean(b)
+
   test("Method calls"){
     input = "id()"
     result must be (Some(MethodCall("id",List())))
@@ -30,13 +32,13 @@ class ExpressionTests extends ParserTest[Expression] with FunSuite{
 
   test("Literals"){
     input = "02"
-    result must be (Some(IntLiteral("02")))
+    result must be (Some(int(2)))
     
     input = "'c'"
-    result must be (Some(CharLiteral("c")))    
+    result must be (Some(char('c')))
 
     input = "true"
-    result must be (Some(BoolLiteral("true")))
+    result must be (Some(boolean(true)))
   }
 
   test("Operators precedence"){    
@@ -98,12 +100,10 @@ class ExpressionTests extends ParserTest[Expression] with FunSuite{
     accept("(exp1+exp2)*exp3")
   }
 
-  test("Operator precedence with bools"){
-    implicit def str2StringLiteral(s:String):BoolLiteral = BoolLiteral(s)
-    
+  test("Operator precedence with bools"){    
     input = "true || false"
     result must be (Some(ExpressionOr(
-      "true","false"
+      true,false
     )))
     
     input = "1+2 <= 5"

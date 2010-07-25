@@ -63,7 +63,6 @@ class KDecafParser extends StandardTokenParsers with PackratParsers{
   }
 
   lazy val parameterList:PackratParser[List[Parameter]] = {
-    println("parameter list")
     "(" ~> repsep(parameter,",") <~ ")"
   }
 
@@ -157,11 +156,11 @@ class KDecafParser extends StandardTokenParsers with PackratParsers{
   lazy val unaryOperationExpression :PackratParser[Expression] = "-" ~> simpleExpression ^^ { NegativeExpression(_)} | "!" ~> simpleExpression ^^ { NotExpression(_)} | simpleExpression
 
   //expression without operations
-  lazy val simpleExpression:PackratParser[Expression] = literal | "(" ~> expression <~ ")" | methodCall | location
+  lazy val simpleExpression:PackratParser[Expression] = literal | "(" ~> expression <~ ")" | methodCall  | location
 
-  lazy val literal:PackratParser[Literal[_]] = numericLit ^^ { IntLiteral(_)} | charLit | "true" ^^ { BoolLiteral(_)} | "false" ^^ { BoolLiteral(_)}
+  lazy val literal:PackratParser[PrimitiveType[_]] = numericLit ^^ { lit =>int(lit.toInt)} | charLit | "true" ^^ { lit => boolean(lit.toBoolean)} | "false" ^^ { lit => boolean(lit.toBoolean)}
 
-  lazy val charLit:PackratParser[CharLiteral] = elem("char", x => { x.isInstanceOf[lexical.CharLit] }) ^^ {c => CharLiteral(c.chars)}
+  lazy val charLit:PackratParser[char] = elem("char", x => { x.isInstanceOf[lexical.CharLit] }) ^^ {c => char(c.chars.charAt(0))}
  
   lazy val location:PackratParser[Location] = arrayLocation | ident ~ optionalLocation ^^ { 
     case id~optLocation => SimpleLocation(id,optLocation)

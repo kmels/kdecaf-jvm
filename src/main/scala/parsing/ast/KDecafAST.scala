@@ -22,11 +22,11 @@ case class StructDeclaration(val name:String, val value:Struct) extends Declarat
 
 case class MethodDeclaration(val methodType:VarType[_],val name:String,val parameters:List[Parameter],val codeBlock:Block) extends Declaration
 
-abstract class VarType[+T]{
+trait VarType[+T] extends Expression{
   val value:T
 }
 
-abstract class PrimitiveType[+T] extends VarType[T]
+abstract class PrimitiveType[+T] extends VarType[T] 
 
 //basic types
 case class int(val value:Int) extends PrimitiveType[Int]
@@ -76,10 +76,11 @@ case class SimpleLocation(val name:String, val optionalMember:Option[Location] =
 
 case class ArrayLocation(val name:String, val index:Expression, val optionalMember:Option[Location] = None) extends Location
 
-abstract class Literal[+T] extends Expression{
+/*abstract class Literal[+T] extends Expression{
   val literal:String
   val value: T
 } 
+
 case class IntLiteral(val literal:String) extends Literal[Int]{
   val value = literal.toInt
 }
@@ -88,7 +89,7 @@ case class CharLiteral(val literal:String) extends Literal[Char]{
 }
 case class BoolLiteral(val literal:String) extends Literal[Boolean]{
   val value = literal.toBoolean
-}
+}*/
 
 abstract class Expression extends Statement
 

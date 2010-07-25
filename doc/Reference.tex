@@ -1,0 +1,127 @@
+\documentclass[12pt,letterpaper]{article}
+\usepackage{listings}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{ifpdf}
+
+\author{Carlos L\'{o}pez}
+\title{KDecaf}
+
+% "define" KDecaf
+\lstdefinelanguage{KDecaf}{
+  morekeywords={class,struct,true,false,void,%
+    if,else,while,return,int,char,boolean},
+  otherkeywords={{,},;,+,-,/,*,<=,>,<,<=,>=,!=,==,\%,@},
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[n]{/*}{*/},
+  morestring=[b]",
+  morestring=[b]',
+  morestring=[b]"""
+}
+
+\usepackage{color}
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+ 
+% Default settings for code listings
+\lstset{frame=tb,
+  language=KDecaf,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  frame=none,
+  breaklines=true,
+  breakatwhitespace=true
+  tabsize=3
+}
+
+
+\begin{document}
+\maketitle
+\section*{Gram\'{a}tica}
+
+\subsection*{Keywords}
+\begin{lstlisting}
+class	struct	true	false	void	if	else
+while	return	int	char	boolean
+\end{lstlisting}
+
+\subsection*{Producciones}
+\begin{lstlisting}
+program             ::=  'class' 'Program' '{' {declaration} '}'
+declaration         ::=  varDeclaration
+                       | structDeclaration 
+                       | methodDeclaration
+varDeclaration      ::=  varType ident '[' numericLit ']' ';'
+                       | varType ident ';'
+                       | structVarDecl
+                       | structDeclaration ident ';'
+                       | structDeclaration ident '[' numericLit ']' ';'
+structVarDecl       ::=  'struct' ident ident ';'
+structDeclaration   ::=  'struct' ident {varDeclarations}
+varType             ::=  primitiveType 
+                       | 'void'
+primitiveType       ::=  'int' 
+                       | 'char'
+                       | 'boolean'
+methodDeclaration   ::=  varType ident parameterList block
+parameterList       ::=  '(' parameter [ ',' parameter ] ')'
+parameter           ::=  primitiveType ident
+                       | primitiveType ident '[' ']'
+block               ::=  '{' {varDeclaration} '}'
+statement           ::=  ifStatement 
+                       | whileStatement
+                       | returnStatement
+                       | methodCall ';'
+                       | block
+                       | assignment
+                       | expression ';'
+ifStatement         ::=  'if' '(' expression ')' block 'else' block
+                       | 'if' '(' expression ')' block                       
+whileStatement      ::=  'while' '(' expression ')' block
+returnStatement     ::=  'return' [expression] ';'
+methodCall          ::=  ident '(' arguments ')'
+arguments           ::=  expression [ ',' expression ]
+assignment          ::=  location '=' expression
+expression          ::=  expressionOp ['&&' | '||' expression ]
+expressionOp        ::=  expressionSum [valueComparators expressionSum]
+valueComparators    ::=  '<='|'<'|'>'|'>='|'=='|'!='
+expressionSum       ::=  expressionMult [ '+'|'-' expressionSum ]
+expressionMult      ::=  unaryOpExpression ['/'|'*','%' expressionMult]
+unaryOpExpression   ::=  '-' simpleExpression 
+                       | '!' simpleExpression
+                       | simpleExpression
+simpleExpression    ::=  literal
+                       | '(' expression ')'
+                       | methodCall
+                       | location
+literal             ::=  numericLit 
+                       | charLit 
+                       | 'false' 
+                       | 'true'
+location            ::=  ident '[' expression ']' optLocation
+                       | ident optLocation
+optLocation         ::=  ['.' location]
+\end{lstlisting}
+
+\section*{Sistema de tipos: Reglas sem\'{a}nticas}
+\subsection*{Axiomas}
+\begin{lstlisting}
+literal -> numericLit
+{ literal.type = int;
+  literal.value = numericLit }
+literal -> charLit
+{ literal.type = CharLiteral }
+literal -> 'false' | 'true'
+{ literal.type = BoolLiteral }
+\end{lstlisting}
+
+\end{document}
