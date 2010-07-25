@@ -46,6 +46,11 @@ class ExpressionTests extends ParserTest[Expression] with FunSuite{
       1,1
     )))
     
+    input = "-1*(2+3)"
+    result must be (Some(ExpressionMult(
+      NegativeExpression(1),ExpressionAdd(2,3)
+    )))
+
     input = "1+2-3"
     result must be (Some(ExpressionAdd(
       1,ExpressionSub(2,3)

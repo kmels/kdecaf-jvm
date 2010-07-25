@@ -134,7 +134,7 @@ class KDecafParser extends StandardTokenParsers with PackratParsers{
     }
   }
    
-  lazy val unaryOperationExpression :PackratParser[Expression] = simpleExpression
+  lazy val unaryOperationExpression :PackratParser[Expression] = "-" ~> simpleExpression ^^ { NegativeExpression(_)} | "!" ~> simpleExpression ^^ { NotExpression(_)} | simpleExpression
 
   //expression without operations
   lazy val simpleExpression:PackratParser[Expression] = literal | "(" ~> expression <~ ")" | methodCall | location
