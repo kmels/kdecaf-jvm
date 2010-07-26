@@ -8,7 +8,7 @@ package parsing.ast
  * @since 1.0
  */
 
-sealed trait KDecafAST {
+sealed trait KDecafAST extends Product{
   override def toString = getClass.getName
   implicit def s(s:String):KDecafAST = StringWrapper(s)
   val children: List[KDecafAST] 
@@ -39,7 +39,7 @@ case class MethodDeclaration(val methodType:VarType[_],val name:String,val param
 
 trait VarType[+T] extends Expression with KDecafAST{
   val value:T
-  override val children:List[KDecafAST] = Nil
+  override val children:List[KDecafAST] = List(value.toString)
 }
 
 abstract class PrimitiveType[+T] extends VarType[T] 
@@ -52,7 +52,6 @@ case class char(val value:Char) extends PrimitiveType[Char]
 case class boolean(val value:Boolean) extends PrimitiveType[Boolean]
 
 case class struct(val value:String) extends VarType[String]{ //the name of the struct 
-  
 }
 
 case class void(val value:Unit) extends VarType[Unit]
@@ -82,7 +81,7 @@ case class Block(val varDeclarations:List[VarDeclaration], val statements:List[S
 }
 
 abstract class Statement extends KDecafAST{
-  val children:List[KDecafAST] = Nil
+  val children:List[KDecafAST]
 }
 
 trait ConditionStatement extends Statement{
@@ -90,24 +89,49 @@ trait ConditionStatement extends Statement{
   val codeBlock:Block
 }
 
-case class IfStatement(val expression:Expression,val codeBlock:Block, val elseBlock:Option[Block] = None) extends ConditionStatement
+case class IfStatement(val expression:Expression,val codeBlock:Block, val elseBlock:Option[Block] = None) extends ConditionStatement{
+  val children:List[KDecafAST] = elseBlock match{
+    case Some(elseBlock) => List(expression,codeBlock,elseBlock)
+    case _ => List(expression,codeBlock)
+  }
+}
 
-case class WhileStatement(val expression:Expression,val codeBlock:Block) extends ConditionStatement
+case class WhileStatement(val expression:Expression,val codeBlock:Block) extends ConditionStatement{
+  val children:List[KDecafAST] = List(expression,codeBlock)
+}
 
-case class MethodCall(val name:String,val arguments:List[Expression]) extends Expression 
+case class MethodCall(val name:String,val arguments:List[Expression]) extends Expression {
+  val children:List[KDecafAST] = List(s(name))++arguments
+}
 
-case class ReturnStatement(val expression:Option[Expression]) extends Statement
+case class ReturnStatement(val expression:Option[Expression]) extends Statement{
+  val children:List[KDecafAST] = expression match{
+    case Some(exp) => List(exp)
+    case _ => Nil
+  }
+}
 
-case class Assignment(val location:Location,val expression:Expression) extends Statement
+case class Assignment(val location:Location,val expression:Expression) extends Statement{
+  val children:List[KDecafAST] = List(location,expression)
+}
 
 abstract class Location extends Expression
 
-case class SimpleLocation(val name:String, val optionalMember:Option[Location] = None) extends Location
-
-case class ArrayLocation(val name:String, val index:Expression, val optionalMember:Option[Location] = None) extends Location
-
-abstract class Expression extends Statement{
+case class SimpleLocation(val name:String, val optionalMember:Option[Location] = None) extends Location{
+  val children:List[KDecafAST] = optionalMember match{
+    case Some(member) => List(s(name),member)
+    case _ => List(s(name))
+  }
 }
+
+case class ArrayLocation(val name:String, val index:Expression, val optionalMember:Option[Location] = None) extends Location{
+  val children:List[KDecafAST] = optionalMember match{
+    case Some(member) => List(s(name),index,member)
+    case _ => List(s(name))
+  }
+}
+
+abstract class Expression extends Statement
 
 abstract class Operator[T]{
   val lexeme:T
@@ -123,9 +147,17 @@ case class ConditionalOperator(val lexeme:String) extends Operator[String]
 
 trait ExpressionOperation extends Expression
 
-trait BinaryOperation[+T] extends ExpressionOperation
+trait BinaryOperation[+T] extends ExpressionOperation{
+  val exp1:Expression
+  val exp2:Expression
 
-trait UnaryOperation extends ExpressionOperation
+  val children:List[Expression] = List(exp1,exp2)
+}
+
+trait UnaryOperation extends ExpressionOperation{
+  val exp:Expression
+  val children:List[Expression] = List(exp)
+}
 
 case class ExpressionAdd(val exp1:Expression,val exp2:Expression) extends BinaryOperation[Int]
 case class ExpressionSub(val exp1:Expression,val exp2:Expression) extends BinaryOperation[Int]
