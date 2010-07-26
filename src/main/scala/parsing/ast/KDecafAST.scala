@@ -8,22 +8,38 @@ package parsing.ast
  * @since 1.0
  */
 
-sealed class KDecafAST
+sealed trait KDecafAST {
+  override def toString = getClass.getName
+  implicit def s(s:String):KDecafAST = StringWrapper(s)
+  val children: List[KDecafAST] 
+}
+
+case class StringWrapper(val s:String) extends KDecafAST{
+  val children = Nil
+  override def toString = s
+}
 
 case class Program(val name:String, val declarations:List[Declaration]) extends KDecafAST{
-  override def toString = "Program("+name+","+declarations.mkString("\n")+")"
+  val children = declarations
 }
 
 abstract class Declaration extends KDecafAST
 
-case class VarDeclaration(val varType:VarType[_], val id:String) extends Declaration
+case class VarDeclaration(val varType:VarType[_], val id:String) extends Declaration{
+  val children = List(s("name: "+id),varType)
+}
 
-case class StructDeclaration(val name:String, val value:Struct) extends Declaration
+case class StructDeclaration(val name:String, val value:Struct) extends Declaration{  
+  val children = List(s(name),value) 
+}
 
-case class MethodDeclaration(val methodType:VarType[_],val name:String,val parameters:List[Parameter],val codeBlock:Block) extends Declaration
+case class MethodDeclaration(val methodType:VarType[_],val name:String,val parameters:List[Parameter],val codeBlock:Block) extends Declaration{
+  val children:List[KDecafAST] = List(methodType,s(name))++parameters:+codeBlock
+}
 
-trait VarType[+T] extends Expression{
+trait VarType[+T] extends Expression with KDecafAST{
   val value:T
+  override val children:List[KDecafAST] = Nil
 }
 
 abstract class PrimitiveType[+T] extends VarType[T] 
@@ -35,25 +51,39 @@ case class char(val value:Char) extends PrimitiveType[Char]
 
 case class boolean(val value:Boolean) extends PrimitiveType[Boolean]
 
-case class struct(val value:String) extends VarType[String] //the name of the struct
+case class struct(val value:String) extends VarType[String]{ //the name of the struct 
+  
+}
 
 case class void(val value:Unit) extends VarType[Unit]
 
 trait TypeConstructor[+T] extends VarType[T]
 
-case class KArray[U <: VarType[_]](val value:Array[U]) extends TypeConstructor[Array[U]]
+case class KArray[U <: VarType[_]](val value:Array[U]) extends TypeConstructor[Array[U]]{
+  override val children = value.toList
+}
 
-case class Struct(val value:List[VarDeclaration]) extends TypeConstructor[List[VarDeclaration]]
+case class Struct(val value:List[VarDeclaration]) extends TypeConstructor[List[VarDeclaration]]{
+  override val children = value
+}
 
-abstract class Parameter 
+abstract class Parameter extends KDecafAST{
+  val varType:PrimitiveType[_]
+  val name:String
+  override val children:List[KDecafAST] = List(varType,name)
+}
 
 case class PrimitiveTypeParameter(val varType:PrimitiveType[_], val name:String) extends Parameter
 
 case class PrimitiveArrayParameter(val varType:PrimitiveType[_], val name:String) extends Parameter
 
-case class Block(val varDeclarations:List[VarDeclaration], val statements:List[Statement]) extends Statement
+case class Block(val varDeclarations:List[VarDeclaration], val statements:List[Statement]) extends Statement{
+  override val children:List[KDecafAST] = varDeclarations++statements
+}
 
-abstract class Statement
+abstract class Statement extends KDecafAST{
+  val children:List[KDecafAST] = Nil
+}
 
 trait ConditionStatement extends Statement{
   val expression:Expression
@@ -76,22 +106,8 @@ case class SimpleLocation(val name:String, val optionalMember:Option[Location] =
 
 case class ArrayLocation(val name:String, val index:Expression, val optionalMember:Option[Location] = None) extends Location
 
-/*abstract class Literal[+T] extends Expression{
-  val literal:String
-  val value: T
-} 
-
-case class IntLiteral(val literal:String) extends Literal[Int]{
-  val value = literal.toInt
+abstract class Expression extends Statement{
 }
-case class CharLiteral(val literal:String) extends Literal[Char]{
-  val value = literal.charAt(0)
-}
-case class BoolLiteral(val literal:String) extends Literal[Boolean]{
-  val value = literal.toBoolean
-}*/
-
-abstract class Expression extends Statement
 
 abstract class Operator[T]{
   val lexeme:T

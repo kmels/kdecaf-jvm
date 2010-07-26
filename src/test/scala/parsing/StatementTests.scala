@@ -65,14 +65,4 @@ class StatementTests extends ParserTest[Statement] with FunSuite{
     }"""
     accept(input)
   }
-  /*
-   
-   
-   if (s1.m == s1.m){
-   methodX();
-   }
-   
-      
-*/
-  //input = "if (1) else (2)"
 }
