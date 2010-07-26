@@ -130,27 +130,130 @@ literal -> 'false' | 'true'
 \subsection*{Reglas sem\'{a}nticas}
 \textbf{Identificadores}
 \begin{lstlisting}
+location -> ident
+//simple location
 { assert(exists(ident));
   location = lookUp(ident); }  
-\end{lstlisting}
 
-\begin{lstlisting}
+//array location
 location -> ident '[' expression ']' 
 { assert(lookUp(ident).isInstanceOf[KArray]);
   assert(expression.isInstanceOf[int]);
   location = lookUp(ident).getUnderlyingType }
-\end{lstlisting}
 
-\begin{lstlisting}
+//array location with member
 location -> ident '[' expression ']' '.' location2
-{ assert(lookUp(ident).isInstanceOf[KArray]);  
+{ 
+  assert(lookUp(ident).isInstanceOf[KArray]);  
   assert(expression.isInstanceOf[int]);
   val s = lookup(ident).getUnderlyingType
   assert(s.isInstanceOf[Struct])
   val = varDeclarations = s.varDeclarations
   assert(varDeclarations.exists(_.id == location2.literal));
   location = T.find(_.id == location2).get }
+
+//simple location with member
+location -> ident '.' location2 { 
+  assert(exists(ident);  
+  val s = lookup(ident).getUnderlyingType
+  assert(s.isInstanceOf[Struct])
+  val = varDeclarations = s.varDeclarations
+  assert(varDeclarations.exists(_.id == location2.literal));
+  location = T.find(_.id == location2).get 
+}
 \end{lstlisting}
 
+\begin{lstlisting}
+simpleExpression -> literal {
+	literal
+}
 
+//parenthesis expression
+simpleExpression -> '(' expression ')' {
+	expression
+}
+
+///method call expression
+simpleExpression -> methodCall {
+	methodCall
+}
+
+//location expression
+simpleExpression -> location {
+	location
+}
+
+\end{lstlisting}
+
+\begin{lstlisting}
+unaryOpExpression -> '-' simpleExpression{
+	assert( simpleExpression.isInstanceOf[Expression[Int]] )
+}
+
+unaryOpExpression -> '!' simpleExpression{
+	assert( simpleExpression.isInstanceOf[Expression[Boolean]]
+}
+
+unaryOpExpression -> simpleExpression
+\end{lstlisting}
+
+\begin{lstlisting}
+expressionMult -> unaryOpExpression 
+
+expressionMult -> unaryOpExpression '/' expressionMult
+
+expressionMult -> unaryOpExpression '*' expressionMult
+
+expressionMult -> unaryOpExpression '%' expressionMult
+\end{lstlisting}
+
+\begin{lstlisting}
+expressionOp -> expressionSum 
+
+expressionOp -> expressionSum valueComparators expressionMult
+\end{lstlisting}
+
+\begin{lstlisting}
+expression -> expressionOp
+
+expression -> expressionOp '&&' expression
+
+expression -> expressionOp '||' expression
+\end{lstlisting}
+
+\begin{lstlisting}
+assignment -> location '=' expression
+\end{lstlisting}
+
+\begin{lstlisting}
+arguments -> expression
+
+arguments -> expression {',' expression}
+\end{lstlisting}
+
+\begin{lstlisting}
+methodCall -> ident '(' arguments ')'
+\end{lstlisting}
+
+\begin{lstlisting}
+returnStatement -> 'return'
+
+returnStatement -> 'return' expression ';'
+
+whileStatement -> 'while' '(' expression ')' block
+
+ifStatement -> 'if' '(' expression ')' block 
+
+ifStatement -> 'if' '(' expression ')' block 'else' block
+\end{lstlisting}
+
+\begin{lstlisting}
+statement -> ifStatement
+
+statement -> whileStatement
+
+statement -> returnStatement
+
+statement -> methodCall ';'
+\end{lstlisting}
 \end{document}

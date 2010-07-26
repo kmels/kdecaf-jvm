@@ -16,4 +16,5 @@ syntax: regexp
 (.*)\.orig
 syntax: regexp
 \.\#(.*)
-
+Reference.aux
+Reference.log
