@@ -5,3 +5,5 @@ import au.ken.treeview.Tree
 import parsing.ast.KDecafAST
 
 class TreePane[T](val root:T, val children: T => Seq[T]) extends ScrollPane(new Tree[T](root,children))
+
+object TreePane extends TreePane[Any](None,None => Seq())
