@@ -19,6 +19,21 @@
   morestring=[b]"""
 }
 
+\lstdefinelanguage{Scala}{
+  morekeywords={abstract,case,catch,class,def,do,else,extends,
+  false,final,finally,for,if,implicit,import,match,mixin,
+  new,null,object,override,package,
+  private,protected,requires,return,sealed,
+  super,this,throw,trait,true,try,type,val,var,while,with,yield},
+  otherkeywords={{,},;,+,-,~>,<~,~,|,/,*,<=,>,<,<=,>=,!=,==,\%,@},
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[n]{/*}{*/},
+  morestring=[b]",
+  morestring=[b]',
+  morestring=[b]"""
+}
+
 \usepackage{color}
 \definecolor{dkgreen}{rgb}{0,0.6,0}
 \definecolor{gray}{rgb}{0.5,0.5,0.5}
@@ -26,7 +41,25 @@
  
 % Default settings for code listings
 \lstset{frame=tb,
-  language=KDecaf,
+  language=Scala,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  frame=none,
+  breaklines=true,
+  breakatwhitespace=true
+  tabsize=3
+}
+
+\lstset{frame=tb,
+  language=Scala,
   aboveskip=3mm,
   belowskip=3mm,
   showstringspaces=false,
@@ -76,7 +109,7 @@ methodDeclaration   ::=  varType ident parameterList block
 parameterList       ::=  '(' parameter [ ',' parameter ] ')'
 parameter           ::=  primitiveType ident
                        | primitiveType ident '[' ']'
-block               ::=  '{' {varDeclaration} '}'
+block               ::=  '{' {varDeclaration} {statement} '}'
 statement           ::=  ifStatement 
                        | whileStatement
                        | returnStatement
@@ -187,42 +220,89 @@ simpleExpression -> location {
 
 \begin{lstlisting}
 unaryOpExpression -> '-' simpleExpression{
-	assert( simpleExpression.isInstanceOf[Expression[Int]] )
+	assert( simpleExpression.isInstanceOf[ExpressionOperation[Int]] )
+	unaryOpExpression:ExpressionOperation[Int] = ExpressionMult(int(-1),simpleExpression)
 }
 
 unaryOpExpression -> '!' simpleExpression{
-	assert( simpleExpression.isInstanceOf[Expression[Boolean]]
+	assert( simpleExpression.isInstanceOf[ExpressionOperation[Boolean]]
+	unaryOpExpression:ExpressionOperation[Boolean] = NotExpression(simpleExpression)
 }
 
-unaryOpExpression -> simpleExpression
+unaryOpExpression -> simpleExpression{
+	unaryOpExpression = simpleExpression
+}
 \end{lstlisting}
 
 \begin{lstlisting}
-expressionMult -> unaryOpExpression 
+expressionMult -> unaryOpExpression{
+	unaryOpExpression
+}
 
-expressionMult -> unaryOpExpression '/' expressionMult
+expressionMult -> unaryOpExpression '/' expressionMult2{
+	assert( unaryOpExpression.isInstanceOf[UnaryOperation[Int]] && expressionMult2.isInstanceOf[BinaryOperation[Int]])	
+	expressionMult = ExpressionDiv( unaryOpExpression, expressionMult)
+}
 
-expressionMult -> unaryOpExpression '*' expressionMult
+expressionMult -> unaryOpExpression '*' expressionMult2{
+	assert( unaryOpExpression.isInstanceOf[UnaryOperation[Int]] && expressionMult2.isInstanceOf[BinaryOperation[Int]])	
+	expressionMult = ExpressionMult( unaryOpExpression, expressionMult)
+}
 
-expressionMult -> unaryOpExpression '%' expressionMult
+expressionMult -> unaryOpExpression '\%' expressionMult2{
+	assert( unaryOpExpression.isInstanceOf[UnaryOperation])
+	assert( unaryOpExpression.asInstanceOf[UnaryOperation].getUnderlyingType == Int )
+	assert( expressionMult2.isInstanceOf[BinaryOperation])
+	assert( expressionMult2.asInstanceOf[BinaryOperation].getUnderlyingType == Int)	
+	expressionMult = ExpressionMod( unaryOpExpression, expressionMult)
+}
 \end{lstlisting}
 
 \begin{lstlisting}
-expressionOp -> expressionSum 
+expressionOp -> expressionSum{
+	expressionSum
+}
 
-expressionOp -> expressionSum valueComparators expressionMult
+expressionOp -> expressionSum valueComparators expressionMult{
+	assert ( expressionSum.isInstanceOf[ExpressionOperation] )
+	assert ( expressionSum.getUnderlyingType == "Int")
+	assert ( expressionMult.isInstanceOf[ExpressionOperation])
+	valueComparators match{
+	    case "<=" => ExpressionLessOrEquals(expressionSum,expressionMult)
+	    case "<" => ExpressionLess(expressionSum,expressionMult)
+	    case ">" => ExpressionGreater(expressionSum,expressionMult)
+	    case ">=" => ExpressionGreaterOrEquals(expressionSum,expressionMult)
+     	case "==" => ExpressionEquals(expressionSum,expressionMult)
+	    case "!=" => ExpressionNotEquals(expressionSum,expressionMult)
+    }
+}
 \end{lstlisting}
 
 \begin{lstlisting}
-expression -> expressionOp
+expression -> expressionOp{
+	expressionOp
+}
 
-expression -> expressionOp '&&' expression
+expression -> expressionOp '&&' expression{
+	assert( expressionOp.isInstanceOf[ExpressionOperation] )
+	assert( expressionOp.getUnderlyingType == "Boolean" )
+	assert( expression.getUnderlyingType == "Boolean" )
+	expressionAnd(expressionOp,expression)
+}
 
-expression -> expressionOp '||' expression
+expression -> expressionOp '||' expression{
+	assert( expressionOp.isInstanceOf[ExpressionOperation] )
+	assert( expressionOp.getUnderlyingType == "Boolean" )
+	assert( expression.getUnderlyingType == "Boolean" )
+	expressionOr(expressionOp,expression)
+}
 \end{lstlisting}
 
 \begin{lstlisting}
-assignment -> location '=' expression
+assignment -> location '=' expression{
+	assert ( location.getUnderlyingType == expression.getUnderlyingType )
+	Assignment(locatio,expression)
+}
 \end{lstlisting}
 
 \begin{lstlisting}
@@ -232,28 +312,151 @@ arguments -> expression {',' expression}
 \end{lstlisting}
 
 \begin{lstlisting}
-methodCall -> ident '(' arguments ')'
+methodCall -> ident '(' arguments ')'{
+	val methodDeclaration = lookUp(ident)
+	assert ( methodDeclaration.isInstanceOf[MethodDeclaration] )
+	assert ( methodDeclaration.parameters.size == arguments.size )
+	methodDeclaration.parameters.ZipWithIndex.foreach{ 
+		parameterWithIndex => {
+			val index = parameterWithIndex._2
+			val parameter:Parameter = parameterWithIndex
+			assert( parameter.getUnderlyingType == arguments(index) )
+		}
+	}
+}
 \end{lstlisting}
 
 \begin{lstlisting}
-returnStatement -> 'return'
+returnStatement -> 'return' {
+	ReturnStatament(None)
+}
 
-returnStatement -> 'return' expression ';'
+returnStatement -> 'return' expression ';'{
+	ReturnStatement(expression)
+}
 
-whileStatement -> 'while' '(' expression ')' block
+whileStatement -> 'while' '(' expression ')' block{
+	assert ( expression.getUnderlyingType == "Boolean" )
+	WhileStatement(expression,block)
+}
 
-ifStatement -> 'if' '(' expression ')' block 
+ifStatement -> 'if' '(' expression ')' block {
+	assert ( expression.getUnderlyingType == "Boolean" )
+	IfStatement(expression,block)
+}
 
-ifStatement -> 'if' '(' expression ')' block 'else' block
+ifStatement -> 'if' '(' expression ')' block 'else' block2{
+	assert ( expression.getUnderlyingType == "Boolean")
+	IfStatement( expression, block, block2)
+}
 \end{lstlisting}
 
 \begin{lstlisting}
-statement -> ifStatement
+statement -> ifStatement{
+	ifStatement
+}
 
-statement -> whileStatement
+statement -> whileStatement{
+	whileStatement
+}
 
-statement -> returnStatement
+statement -> returnStatement{
+	whileStatement
+}
 
-statement -> methodCall ';'
+statement -> methodCall ';'{
+	methodCall 
+}
+
+statement -> block {
+	block
+}
+
+statement -> assignment{
+	assignment
+}
 \end{lstlisting}
+
+\begin{lstlisting}
+block -> '{' varDeclarations statements '}'{
+	Block(varDeclarations,statements)
+}	
+\end{lstlisting}
+
+\begin{lstlisting}
+parameter -> primitiveType ident{
+	PrimitiveTypeParameter(primitiveType,ident)
+}
+
+parameter -> primitiveType ident '[' ']'{
+	PrimitiveArrayParameter(primitiveType,ident)
+}
+\end{lstlisting}
+
+\begin{lstlisting}
+primitiveType -> 'int' {
+	int(0)
+}
+
+primitiveType -> 'char' {
+	char(0)
+}
+
+primitiveType -> 'boolean'{
+	boolean(0)
+}
+\end{lstlisting}
+
+\begin{lstlisting}
+structDeclaration -> 'struct' ident varDeclarations{
+	assert( !table.contains(ident) )	
+	Struct(ident,varDeclarations)
+}
+
+structVarDecl -> 'struct' ident ident2 ';'{
+	assert( !table.contains(ident2) )
+	assert( table.contains(ident) )
+	VarDeclaration(struct(ident),ident2)
+}
+\end{lstlisting}
+
+\begin{lstlisting}
+varDeclaration -> varType ident '[' numericLit ']' ';'{
+	assert( !table.contains(ident) ) 
+	VarDeclaration(ident,KArray(varType,numericLit))
+}
+
+varDeclaration -> varType ident ';'{
+	assert ( !table.contains(ident) )
+	VarDeclaration(varType,ident)
+}
+
+varDecalration -> structVarDecl{
+	structVarDecl
+}
+
+varDeclaration -> structDeclaration ident ';'{
+	assert ( !table.contains(ident))
+	VarDeclaration(structDeclaration,ident)
+}
+
+declaration -> varDeclaration{
+	varDeclaration
+}
+
+declaration -> structDeclaration{
+	structDeclaration
+}
+
+program -> 'class' 'Program' '{' declarations '}' {
+	Program("Program",declarations)
+}
+\end{lstlisting}
+
+\subsection*{Algunas reglas sem\'{a}nticas programadas}
+\lstinputlisting{/home/kmels/code/uvg/cc3007/src/main/scala/parsing/KDecafParser.scala}
+
+\subsection*{Nodos del \'{a}rbol sint\'{a}ctico abstracto: Sistema de tipos con sus subtipos}
+\lstinputlisting{/home/kmels/code/uvg/cc3007/src/main/scala/parsing/ast/KDecafAST.scala}
+
 \end{document}

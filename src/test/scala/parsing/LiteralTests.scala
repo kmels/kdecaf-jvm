@@ -1,7 +1,7 @@
 package parsing.test
 
 import org.scalatest.FunSuite
-import parsing.ast.{int,char,boolean,PrimitiveType}
+import parsing.ast.{Literal,IntLiteral,CharLiteral,BoolLiteral}
 
 /**
  * Parsing tests for Literal
@@ -10,26 +10,26 @@ import parsing.ast.{int,char,boolean,PrimitiveType}
  * @version 1.0
  * @since 1.0
  */ 
-class LiteralTests extends ParserTest[PrimitiveType[_]] with FunSuite{
+class LiteralTests extends ParserTest[Literal[_]] with FunSuite{
   val parser = literal
-  implicit def intWrapper(i:Int):int = int(i)
-  implicit def charWrapper(c:Char):char = char(c)
-  implicit def boolWrapper(b:Boolean):boolean = boolean(b)
+  implicit def intLiteral(i:Int):IntLiteral = IntLiteral(i)
+  implicit def charLiteral(c:Char):CharLiteral = CharLiteral(c)
+  implicit def boolLiteral(b:Boolean):BoolLiteral = BoolLiteral(b)
 
   test ("Integer literals"){
     input = "12345"
-    result must be (Some(int(12345)))
+    result must be (Some(IntLiteral(12345)))
 
     input = "0"
-    result must be (Some(int(0)))
+    result must be (Some(IntLiteral(0)))
   }
 
   test ("Boolean literals"){
     input = "true"
-    result must be (Some(boolean(true)))
+    result must be (Some(BoolLiteral(true)))
 
     input = "false"
-    result must be (Some(boolean(false)))
+    result must be (Some(BoolLiteral(false)))
 
     input = "False"
     result must be (None)
@@ -37,9 +37,9 @@ class LiteralTests extends ParserTest[PrimitiveType[_]] with FunSuite{
 
   test ("Char literals"){
     input = "'e'"
-    result must be (Some(char('e')))
+    result must be (Some(CharLiteral('e')))
 
     input = "'m'"
-    result must be (Some(char('m')))
+    result must be (Some(CharLiteral('m')))
   }
 }

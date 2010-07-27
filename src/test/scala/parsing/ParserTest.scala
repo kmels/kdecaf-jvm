@@ -5,7 +5,7 @@ import org.scalatest.matchers.MustMatchers
 import scala.util.parsing.combinator.{lexical,syntactical}
 import lexical.Scanners
 import parsing.{KDecafParser}
-import parsing.lexical.KDecafLexer
+import parsing.KDecafLexer
 
 /**
  * A trait for testing parsers
@@ -13,7 +13,7 @@ import parsing.lexical.KDecafLexer
  * @author Carlos Lopez
  * @version 1.0
  * @since 1.0
- */ 
+ */
 
 trait ParserTest[T] extends KDecafParser with MustMatchers{
   var input:String = ""
@@ -34,7 +34,7 @@ trait ParserTest[T] extends KDecafParser with MustMatchers{
     parser(packratReader)
   }
 
-  def result:Option[T] = parseResult match{
+  def result[U <: T]:Option[T] = parseResult match{
     case Success(ast,next) => next.atEnd match{
       case true => Some(ast)
       case rest => {

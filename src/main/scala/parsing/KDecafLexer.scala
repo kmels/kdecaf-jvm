@@ -1,4 +1,4 @@
-package parsing.lexical
+package parsing
 
 import scala.util.parsing.combinator.lexical.StdLexical
 import scala.util.parsing.input.CharSequenceReader.EofCh

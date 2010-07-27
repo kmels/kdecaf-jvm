@@ -12,9 +12,9 @@ import parsing.ast._
  */ 
 class ExpressionTests extends ParserTest[Expression] with FunSuite{
   val parser = expression
-  implicit def intWrapper(i:Int):int = int(i)
-  implicit def charWrapper(c:Char):char = char(c)
-  implicit def boolWrapper(b:Boolean):boolean = boolean(b)
+  implicit def intLiteral(i:Int):IntLiteral = IntLiteral(i)
+  implicit def charLiteral(c:Char):CharLiteral = CharLiteral(c)
+  implicit def boolLiteral(b:Boolean):BoolLiteral = BoolLiteral(b)
 
   test("Method calls"){
     input = "id()"
@@ -32,13 +32,13 @@ class ExpressionTests extends ParserTest[Expression] with FunSuite{
 
   test("Literals"){
     input = "02"
-    result must be (Some(int(2)))
+    result must be (Some(IntLiteral(2)))
     
     input = "'c'"
-    result must be (Some(char('c')))
+    result must be (Some(CharLiteral('c')))
 
     input = "true"
-    result must be (Some(boolean(true)))
+    result must be (Some(BoolLiteral(true)))
   }
 
   test("Operators precedence"){    

@@ -7,11 +7,10 @@ package parsing.ast
  * @version 1.0
  * @since 1.0
  */
-
 sealed trait KDecafAST extends Product{
   override def toString = getClass.getName
   implicit def s(s:String):KDecafAST = StringWrapper(s)
-  val children: List[KDecafAST] 
+  val children: List[KDecafAST]   
 }
 
 case class StringWrapper(val s:String) extends KDecafAST{
@@ -25,41 +24,39 @@ case class Program(val name:String, val declarations:List[Declaration]) extends 
 
 abstract class Declaration extends KDecafAST
 
-case class VarDeclaration(val varType:VarType[_], val id:String) extends Declaration{
-  val children = List(s("name: "+id),varType)
+case class VarDeclaration(val varType:VarType, val id:String) extends Declaration{
+  implicit def S(s:String):KDecafAST = StringWrapper(s)
+  val children:List[KDecafAST] = List(id,varType)
 }
 
 case class StructDeclaration(val name:String, val value:Struct) extends Declaration{  
   val children = List(s(name),value) 
 }
 
-case class MethodDeclaration(val methodType:VarType[_],val name:String,val parameters:List[Parameter],val codeBlock:Block) extends Declaration{
+case class MethodDeclaration(val methodType:VarType,val name:String,val parameters:List[Parameter],val codeBlock:Block) extends Declaration{
   val children:List[KDecafAST] = List(methodType,s(name))++parameters:+codeBlock
 }
 
-trait VarType[+T] extends Expression with KDecafAST{
-  val value:T
-  override val children:List[KDecafAST] = List(value.toString)
+trait VarType extends Expression{
+  val children:List[KDecafAST] = Nil
+  def getUnderlyingType:String = "None"
 }
 
-abstract class PrimitiveType[+T] extends VarType[T] 
+case class void() extends VarType
+
+case class PrimitiveType[T](implicit m:Manifest[T]) extends VarType{
+  override def getUnderlyingType = m.toString
+
+  override def toString = "PrimitiveType["+m.toString+"]"
+}
 
 //basic types
-case class int(val value:Int) extends PrimitiveType[Int]
+case class struct(val value:String) extends VarType //the name of the struct 
 
-case class char(val value:Char) extends PrimitiveType[Char]
+trait TypeConstructor[T] extends VarType
 
-case class boolean(val value:Boolean) extends PrimitiveType[Boolean]
-
-case class struct(val value:String) extends VarType[String]{ //the name of the struct 
-}
-
-case class void(val value:Unit) extends VarType[Unit]
-
-trait TypeConstructor[+T] extends VarType[T]
-
-case class KArray[U <: VarType[_]](val value:Array[U]) extends TypeConstructor[Array[U]]{
-  override val children = value.toList
+case class KArray[U](implicit m:Manifest[U]) extends TypeConstructor[U]{
+  override def toString = "KArray["+m.toString+"]"
 }
 
 case class Struct(val value:List[VarDeclaration]) extends TypeConstructor[List[VarDeclaration]]{
@@ -147,7 +144,7 @@ case class ConditionalOperator(val lexeme:String) extends Operator[String]
 
 trait ExpressionOperation extends Expression
 
-trait BinaryOperation[+T] extends ExpressionOperation{
+trait BinaryOperation[T] extends ExpressionOperation{
   val exp1:Expression
   val exp2:Expression
 
@@ -179,3 +176,13 @@ case class ExpressionNotEquals(val exp1:Expression, val exp2:Expression) extends
 case class NegativeExpression(val exp:Expression) extends UnaryOperation
 case class NotExpression(val exp:Expression) extends UnaryOperation
 
+trait Literal[T] extends Expression{
+  val literal:T
+  override val children = Nil
+}
+
+case class IntLiteral(val literal:Int) extends Literal[Int]()
+
+case class CharLiteral(val literal:Char) extends Literal[Char]()
+
+case class BoolLiteral(val literal:Boolean) extends Literal[Boolean]()
