@@ -1,4 +1,4 @@
-package parsing.ast
+package compiler.parsing.ast
 
 /**
  * ASTs class nodes

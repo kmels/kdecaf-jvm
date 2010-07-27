@@ -1,7 +1,7 @@
-package parsing.test
+package compiler.parsing.test
 
 import org.scalatest.FunSuite
-import parsing.ast.{Literal,IntLiteral,CharLiteral,BoolLiteral}
+import compiler.parsing.ast.{Literal,IntLiteral,CharLiteral,BoolLiteral}
 
 /**
  * Parsing tests for Literal

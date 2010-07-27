@@ -1,7 +1,7 @@
-package parsing.test
+package compiler.parsing.test
 
 import org.scalatest.FunSuite
-import parsing.ast._
+import compiler.parsing.ast._
 
 /**
  * Parsing tests for expressions

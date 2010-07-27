@@ -1,11 +1,11 @@
-package parsing.test
+package compiler.parsing.test
 
 import org.scalatest.FunSuite
 import org.scalatest.matchers.MustMatchers
 import scala.util.parsing.combinator.{lexical,syntactical}
 import lexical.Scanners
-import parsing.{KDecafParser}
-import parsing.KDecafLexer
+import compiler.parsing.{KDecafParser}
+import compiler.parsing.KDecafLexer
 
 /**
  * A trait for testing parsers

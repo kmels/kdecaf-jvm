@@ -3,8 +3,8 @@ package gui.panels
 import scala.swing.{BoxPanel,Orientation,Button,Component}
 import java.awt.Dimension
 import swing.event.ButtonClicked
-import parsing.KDecafParser
-import parsing.ast.{KDecafAST,Program}
+import compiler.parsing.KDecafParser
+import compiler.parsing.ast.{KDecafAST,Program}
 
 object LeftPanel extends BoxPanel(Orientation.Vertical){
   object importFileButton extends Button("Import file"){

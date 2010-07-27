@@ -1,8 +1,8 @@
-package parsing.test
+package compiler.parsing.test
 
 import org.scalatest.Spec
 import org.scalatest.matchers.MustMatchers
-import parsing.ast._
+import compiler.parsing.ast._
 
 /**
  * A parsing test for a Program

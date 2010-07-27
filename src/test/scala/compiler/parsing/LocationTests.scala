@@ -1,7 +1,7 @@
-package parsing.test
+package compiler.parsing.test
 
 import org.scalatest.FunSuite
-import parsing.ast.{Location,SimpleLocation,ArrayLocation}
+import compiler.parsing.ast.{Location,SimpleLocation,ArrayLocation}
 
 /**
  * Parsing tests for location expressions
