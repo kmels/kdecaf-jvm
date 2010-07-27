@@ -60,7 +60,7 @@ object LeftPanel extends BoxPanel(Orientation.Vertical){
     }
   }
   
-  peer.setPreferredSize(new java.awt.Dimension(260,680))
+  peer.setPreferredSize(new java.awt.Dimension(340,680))
 }
 
 object RightPanel extends BoxPanel(Orientation.Vertical){

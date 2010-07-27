@@ -55,7 +55,9 @@ class KDecafParser extends StandardTokenParsers with PackratParsers{
     case structName~varDeclarations => StructDeclaration(structName, Struct(varDeclarations))
   }
   
-  lazy val varType:PackratParser[VarType] = primitiveType | "void" ^^ {  _ => void() }
+  lazy val varType:PackratParser[VarType] = primitiveType | "void" ^^ {
+    _ => void()
+  }
 
   lazy val primitiveType:PackratParser[PrimitiveType[_]] =  primitiveChar | primitiveIntOrBool
 
@@ -63,6 +65,7 @@ class KDecafParser extends StandardTokenParsers with PackratParsers{
    
   lazy val primitiveChar:PackratParser[PrimitiveType[Char]] = "char" ^^ { _ => PrimitiveType[Char]()} 
   
+
   lazy val methodDeclaration:PackratParser[MethodDeclaration] = varType ~ ident ~ parameterList ~ block ^^ {
     case methodType~name~parameters~codeBlock =>  MethodDeclaration(methodType,name,parameters,codeBlock) 
   }
@@ -163,7 +166,7 @@ class KDecafParser extends StandardTokenParsers with PackratParsers{
   //expression without operations
   lazy val simpleExpression:PackratParser[Expression] = literal | "(" ~> expression <~ ")" | methodCall  | location
 
-  lazy val literal:PackratParser[Literal[_]] = numericLit ^^ { lit => IntLiteral(lit.toInt)} | boolOrCharLit
+  lazy val literal:PackratParser[Literal[_]] = numericLit ^^ { lit => IntLiteral(lit.toInt)} |  boolOrCharLit
 
   lazy val boolOrCharLit:PackratParser[Literal[_]] = boolLit | charLit
 

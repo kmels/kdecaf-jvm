@@ -7,15 +7,16 @@ package parsing.ast
  * @version 1.0
  * @since 1.0
  */
-sealed trait KDecafAST extends Product{
+sealed trait KDecafAST {
   override def toString = getClass.getName
-  implicit def s(s:String):KDecafAST = StringWrapper(s)
+  implicit def s(s:String):KDecafAST = new StringWrapper(s)
   val children: List[KDecafAST]   
-}
 
-case class StringWrapper(val s:String) extends KDecafAST{
-  val children = Nil
-  override def toString = s
+  //string wrapper for listing nodes
+  class StringWrapper(val s:String) extends KDecafAST{
+    val children = Nil
+    override def toString = s
+  }
 }
 
 case class Program(val name:String, val declarations:List[Declaration]) extends KDecafAST{
@@ -25,16 +26,15 @@ case class Program(val name:String, val declarations:List[Declaration]) extends 
 abstract class Declaration extends KDecafAST
 
 case class VarDeclaration(val varType:VarType, val id:String) extends Declaration{
-  implicit def S(s:String):KDecafAST = StringWrapper(s)
   val children:List[KDecafAST] = List(id,varType)
 }
 
 case class StructDeclaration(val name:String, val value:Struct) extends Declaration{  
-  val children = List(s(name),value) 
+  val children:List[KDecafAST] = List(name,value) 
 }
 
 case class MethodDeclaration(val methodType:VarType,val name:String,val parameters:List[Parameter],val codeBlock:Block) extends Declaration{
-  val children:List[KDecafAST] = List(methodType,s(name))++parameters:+codeBlock
+  val children:List[KDecafAST] = List[KDecafAST](methodType,name)++parameters:+codeBlock
 }
 
 trait VarType extends Expression{
@@ -98,7 +98,7 @@ case class WhileStatement(val expression:Expression,val codeBlock:Block) extends
 }
 
 case class MethodCall(val name:String,val arguments:List[Expression]) extends Expression {
-  val children:List[KDecafAST] = List(s(name))++arguments
+  val children:List[KDecafAST] = List[KDecafAST](name)++arguments
 }
 
 case class ReturnStatement(val expression:Option[Expression]) extends Statement{
@@ -116,15 +116,15 @@ abstract class Location extends Expression
 
 case class SimpleLocation(val name:String, val optionalMember:Option[Location] = None) extends Location{
   val children:List[KDecafAST] = optionalMember match{
-    case Some(member) => List(s(name),member)
+    case Some(member) => List(name,member)
     case _ => List(s(name))
   }
 }
 
 case class ArrayLocation(val name:String, val index:Expression, val optionalMember:Option[Location] = None) extends Location{
   val children:List[KDecafAST] = optionalMember match{
-    case Some(member) => List(s(name),index,member)
-    case _ => List(s(name))
+    case Some(member) => List(name,index,member)
+    case _ => List(name)
   }
 }
 
@@ -142,47 +142,53 @@ case class EqualityOperator(val lexeme:String) extends Operator[String]
 
 case class ConditionalOperator(val lexeme:String) extends Operator[String]
 
-trait ExpressionOperation extends Expression
+trait ExpressionOperation[T] extends Expression{
+  val m:Manifest[T] 
+  override def toString = super.toString+": "+m.toString
+}
 
-trait BinaryOperation[T] extends ExpressionOperation{
+trait BinaryOperation[T] extends ExpressionOperation[T]{
   val exp1:Expression
   val exp2:Expression
 
   val children:List[Expression] = List(exp1,exp2)
 }
 
-trait UnaryOperation extends ExpressionOperation{
+trait UnaryOperation[T] extends ExpressionOperation[T]{
   val exp:Expression
   val children:List[Expression] = List(exp)
 }
 
-case class ExpressionAdd(val exp1:Expression,val exp2:Expression) extends BinaryOperation[Int]
-case class ExpressionSub(val exp1:Expression,val exp2:Expression) extends BinaryOperation[Int]
-case class ExpressionMult(val exp1:Expression, val exp2:Expression) extends BinaryOperation[Int]
-case class ExpressionDiv(val exp1:Expression, val exp2:Expression) extends BinaryOperation[Int]
-case class ExpressionMod(val exp1:Expression, val exp2:Expression) extends BinaryOperation[Int]
+case class ExpressionAdd(val exp1:Expression,val exp2:Expression)(implicit val m:Manifest[Int]) extends BinaryOperation[Int] 
 
-case class ExpressionAnd(val exp1:Expression, val exp2:Expression) extends BinaryOperation[Boolean]
-case class ExpressionOr(val exp1:Expression, val exp2:Expression) extends BinaryOperation[Boolean]
+case class ExpressionSub(val exp1:Expression,val exp2:Expression)(implicit val m:Manifest[Int]) extends BinaryOperation[Int] 
+case class ExpressionMult(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Int]) extends BinaryOperation[Int] 
+case class ExpressionDiv(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Int]) extends BinaryOperation[Int] 
+case class ExpressionMod(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Int]) extends BinaryOperation[Int] 
 
-case class ExpressionLessOrEquals(val exp1:Expression, val exp2:Expression) extends BinaryOperation[Boolean]
-case class ExpressionLess(val exp1:Expression, val exp2:Expression) extends BinaryOperation[Boolean]
-case class ExpressionGreater(val exp1:Expression, val exp2:Expression) extends BinaryOperation[Boolean]
-case class ExpressionGreaterOrEquals(val exp1:Expression, val exp2:Expression) extends BinaryOperation[Boolean]
-case class ExpressionEquals(val exp1:Expression, val exp2:Expression) extends BinaryOperation[Boolean]
-case class ExpressionNotEquals(val exp1:Expression, val exp2:Expression) extends BinaryOperation[Boolean]
+case class ExpressionAnd(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] 
+case class ExpressionOr(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] 
+
+case class ExpressionLessOrEquals(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] 
+case class ExpressionLess(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] 
+case class ExpressionGreater(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] 
+case class ExpressionGreaterOrEquals(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] 
+case class ExpressionEquals(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] 
+case class ExpressionNotEquals(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] 
 
 
-case class NegativeExpression(val exp:Expression) extends UnaryOperation
-case class NotExpression(val exp:Expression) extends UnaryOperation
+case class NegativeExpression(val exp:Expression)(implicit val m:Manifest[Int]) extends UnaryOperation[Int] 
+case class NotExpression(val exp:Expression)(implicit val m:Manifest[Boolean]) extends UnaryOperation[Boolean] 
 
 trait Literal[T] extends Expression{
+  val m:Manifest[T]
   val literal:T
   override val children = Nil
+  override def toString = "Literal["+m+"]"
 }
 
-case class IntLiteral(val literal:Int) extends Literal[Int]()
+case class IntLiteral(val literal:Int)(implicit val m:Manifest[Int]) extends Literal[Int]()
 
-case class CharLiteral(val literal:Char) extends Literal[Char]()
+case class CharLiteral(val literal:Char)(implicit val m:Manifest[Char]) extends Literal[Char]()
 
-case class BoolLiteral(val literal:Boolean) extends Literal[Boolean]()
+case class BoolLiteral(val literal:Boolean)(implicit val m:Manifest[Boolean]) extends Literal[Boolean]()

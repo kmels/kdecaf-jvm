@@ -12,9 +12,6 @@ import parsing.ast.{Literal,IntLiteral,CharLiteral,BoolLiteral}
  */ 
 class LiteralTests extends ParserTest[Literal[_]] with FunSuite{
   val parser = literal
-  implicit def intLiteral(i:Int):IntLiteral = IntLiteral(i)
-  implicit def charLiteral(c:Char):CharLiteral = CharLiteral(c)
-  implicit def boolLiteral(b:Boolean):BoolLiteral = BoolLiteral(b)
 
   test ("Integer literals"){
     input = "12345"
