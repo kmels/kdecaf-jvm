@@ -13,13 +13,6 @@ object Main extends SimpleSwingApplication{
       contents += RightPanel
     }
 
-    val runButton = LeftPanel.runButton
-
-    reactions += {
-      case ButtonClicked(`runButton`) =>{
-	println("EE!!")
-      }
-    }
     peer.setResizable(false)
   }
 }

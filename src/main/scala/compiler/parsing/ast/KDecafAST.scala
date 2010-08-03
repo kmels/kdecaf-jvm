@@ -1,4 +1,6 @@
 package compiler.parsing.ast
+import compiler.SymbolTable
+import compiler.semantics._
 
 /**
  * ASTs class nodes
@@ -10,6 +12,7 @@ package compiler.parsing.ast
 sealed trait KDecafAST {
   override def toString = getClass.getName
   implicit def s(s:String):KDecafAST = new StringWrapper(s)
+
   val children: List[KDecafAST]   
 
   //string wrapper for listing nodes
@@ -19,8 +22,30 @@ sealed trait KDecafAST {
   }
 }
 
-case class Program(val name:String, val declarations:List[Declaration]) extends KDecafAST{
+case class Program(val name:String, val declarations:List[Declaration]) extends KDecafAST with SemanticRule{
   val children = declarations
+
+  val semanticAction = SemanticAction(
+    (attributes: SemanticAttributes) => {
+      declarations.foreach( dcl => dcl match{
+	// don't allow duplicate names of variables
+	case VarDeclaration(varType,id) => {
+	  attributes.scope match {
+	    case Some(scope) => 
+	      if (SymbolTable.contains((id,scope)))
+		SemanticError("variable \""+id+"\" already declared in scope \"global\"")
+	      else
+		SymbolTable.place((id,scope),varType)
+	    case _ => {} //throw new InternalErrorException("")
+	  }
+	}
+	case StructDeclaration(name,struct) => {
+	 // if (SymbolTable.contains((id,"global")))
+	}
+      })
+    }    
+  )
+
 }
 
 abstract class Declaration extends KDecafAST

@@ -3,6 +3,7 @@ package compiler.parsing
 import scala.util.parsing.combinator.{syntactical,PackratParsers}
 import syntactical.{StandardTokenParsers}
 import scala.util.parsing.input.CharArrayReader.EofCh
+import compiler.SymbolTable
 import ast._
 
 /**
