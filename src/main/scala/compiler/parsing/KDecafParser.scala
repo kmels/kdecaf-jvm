@@ -58,12 +58,8 @@ class KDecafParser extends StandardTokenParsers with PackratParsers{
   
   lazy val varType:PackratParser[VarType] = primitiveType | "void" ^^ { _ => void }
 
-  lazy val primitiveType:PackratParser[PrimitiveType[_]] =  primitiveChar | primitiveIntOrBool
+  lazy val primitiveType:PackratParser[PrimitiveType[AnyVal]] = "int" ^^ { _ => PrimitiveInt } | "boolean" ^^ {_ => PrimitiveBoolean} | "char" ^^ { _ => PrimitiveChar} 
 
-  lazy val primitiveIntOrBool:PackratParser[PrimitiveType[_]] = "int" ^^ { _ => PrimitiveInt } | "boolean" ^^ {_ => PrimitiveBoolean}
-   
-  lazy val primitiveChar:PackratParser[PrimitiveType[Char]] = "char" ^^ { _ => PrimitiveChar} 
-  
   lazy val methodDeclaration:PackratParser[MethodDeclaration] = varType ~ ident ~ parameterList ~ block ^^ {
     case methodType~name~parameters~codeBlock =>  MethodDeclaration(methodType,name,parameters,codeBlock) 
   }
@@ -164,13 +160,8 @@ class KDecafParser extends StandardTokenParsers with PackratParsers{
   //expression without operations
   lazy val simpleExpression:PackratParser[Expression] = literal | "(" ~> expression <~ ")" | methodCall  | location
 
-  lazy val literal:PackratParser[Literal[_]] = numericLit ^^ { lit => IntLiteral(lit.toInt)} |  boolOrCharLit
-
-  lazy val boolOrCharLit:PackratParser[Literal[_]] = boolLit | charLit
-
-  lazy val boolLit:PackratParser[BoolLiteral] = ("true"|"false") ^^ { case v => BoolLiteral(v.toBoolean)}
-
-  lazy val charLit:PackratParser[CharLiteral] = elem("char", x => { x.isInstanceOf[lexical.CharLit] }) ^^ {c => CharLiteral(c.chars.charAt(0))}
+  lazy val literal:PackratParser[Literal[AnyVal]] = 
+    numericLit ^^ { lit => IntLiteral(lit.toInt)} | ("true"|"false") ^^ { case v => BoolLiteral(v.toBoolean)} | elem("char", x => { x.isInstanceOf[lexical.CharLit] }) ^^ {c => CharLiteral(c.chars.charAt(0))}
  
   lazy val location:PackratParser[Location] = arrayLocation | ident ~ optionalLocation ^^ { 
     case id~optLocation => SimpleLocation(id,optLocation)

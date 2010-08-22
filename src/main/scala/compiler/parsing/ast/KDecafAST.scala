@@ -226,8 +226,7 @@ case class ExpressionNotEquals(val exp1:Expression, val exp2:Expression)(implici
 case class NegativeExpression(val exp:Expression)(implicit val m:Manifest[Int]) extends UnaryOperation[Int] 
 case class NotExpression(val exp:Expression)(implicit val m:Manifest[Boolean]) extends UnaryOperation[Boolean] 
 
-trait Literal[T] extends Expression{
-  val m:Manifest[T]
+abstract class Literal[+T](implicit m:Manifest[T]) extends Expression{
   val literal:T
   override val children = Nil
   override def toString = "Literal["+m+"]"
