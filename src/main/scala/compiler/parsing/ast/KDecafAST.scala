@@ -9,7 +9,7 @@ import compiler.semantics._
  * @version 1.0
  * @since 1.0
  */
-sealed trait KDecafAST {
+trait KDecafAST {
   override def toString = getClass.getName
   implicit def s(s:String):KDecafAST = new StringWrapper(s)
 
@@ -27,22 +27,39 @@ case class Program(val name:String, val declarations:List[Declaration]) extends 
 
   val semanticAction = SemanticAction(
     (attributes: SemanticAttributes) => {
-      declarations.foreach( dcl => dcl match{
+      declarations.foreach( declaration => declaration match{
 	// don't allow duplicate names of variables
-	case VarDeclaration(varType,id) => {
+	case VarDeclaration(varType,varName) => {
 	  attributes.scope match {
 	    case Some(scope) => 
-	      if (SymbolTable.contains((id,scope)))
-		SemanticError("variable \""+id+"\" already declared in scope \"global\"")
+	      if (SymbolTable.contains((varName,scope)))
+		SemanticError("variable \""+varName+"\" already declared in scope \"global\"")
 	      else
-		SymbolTable.place((id,scope),varType)
+		SymbolTable.place((varName,scope),varType)
 	    case _ => {} //throw new InternalErrorException("")
 	  }
 	}
-	case StructDeclaration(name,struct) => {
-	 // if (SymbolTable.contains((id,"global")))
+	case StructDeclaration(structName,struct) =>
+	  attributes.scope match {
+	    case Some(scope) => 
+	      if (SymbolTable.contains((structName,"global")))
+		SemanticError("struct \""+structName+"\" already declared in scope \"global\"")
+	      else
+		SymbolTable.place((structName,scope),struct)
+	    case _ => {} //throw exception
+	  }
+	case MethodDeclaration(methodType,methodName,parameterList,codeBlock) => attributes.scope match{
+	  case Some(scope) => 
+	    if (SymbolTable.containsName(methodName))
+	      SemanticError("method \""+methodName+"\" already declared in scope \"global\"")
+	    else
+	      SymbolTable.place((methodName,scope),(methodType,attributeListToAttribute(parameterList)))
+	  case _ => {} //..throw exception
 	}
-      })
+
+	//call declarations semantic action
+	//declaration()
+      }) //end foreach
     }    
   )
 
@@ -56,10 +73,12 @@ case class VarDeclaration(val varType:VarType, val id:String) extends Declaratio
 
 case class StructDeclaration(val name:String, val value:Struct) extends Declaration{  
   val children:List[KDecafAST] = List(name,value) 
+
+  def getUnderlyingType:String = "Struct"
 }
 
 case class MethodDeclaration(val methodType:VarType,val name:String,val parameters:List[Parameter],val codeBlock:Block) extends Declaration{
-  val children:List[KDecafAST] = List[KDecafAST](methodType,name)++parameters:+codeBlock
+  val children:List[KDecafAST] = List[KDecafAST](methodType,name)++parameters:+codeBlock  
 }
 
 trait VarType extends Expression{
@@ -67,13 +86,15 @@ trait VarType extends Expression{
   def getUnderlyingType:String = "None"
 }
 
-case class void() extends VarType
-
-case class PrimitiveType[T](implicit m:Manifest[T]) extends VarType{
+class PrimitiveType[+T](implicit m:Manifest[T]) extends VarType{
   override def getUnderlyingType = m.toString
-
   override def toString = "PrimitiveType["+m.toString+"]"
 }
+
+object void extends VarType
+object PrimitiveBoolean extends PrimitiveType[Boolean]
+object PrimitiveInt extends PrimitiveType[Int]
+object PrimitiveChar extends PrimitiveType[Char]
 
 //basic types
 case class struct(val value:String) extends VarType //the name of the struct 
