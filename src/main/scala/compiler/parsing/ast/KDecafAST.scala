@@ -1,12 +1,17 @@
 package compiler.parsing.ast
-import compiler.SymbolTable
-import compiler.semantics._
+import compiler._
+import semantics._
+import compiler.types.{aliases => typeAliases,AttributeList}
+import typeAliases._
+
+//import compiler.SymbolTable
+//import compiler.semantics._
 
 /**
  * ASTs class nodes
  *
  * @author Carlos Lopez
- * @version 1.0
+ * @version 2.0
  * @since 1.0
  */
 trait KDecafAST {
@@ -22,63 +27,72 @@ trait KDecafAST {
   }
 }
 
-case class Program(val name:String, val declarations:List[Declaration]) extends KDecafAST with SemanticRule{
+case class Program(val name:String, val declarations:List[Declaration]) extends KDecafAST with SemanticRule{ 
   val children = declarations
 
   val semanticAction = SemanticAction(
     (attributes: SemanticAttributes) => {
-      declarations.foreach( declaration => declaration match{
-	// don't allow duplicate names of variables
-	case VarDeclaration(varType,varName) => {
-	  attributes.scope match {
-	    case Some(scope) => 
-	      if (SymbolTable.contains((varName,scope)))
-		SemanticError("variable \""+varName+"\" already declared in scope \"global\"")
-	      else
-		SymbolTable.place((varName,scope),varType)
-	    case _ => {} //throw new InternalErrorException("")
-	  }
-	}
-	case StructDeclaration(structName,struct) =>
-	  attributes.scope match {
-	    case Some(scope) => 
-	      if (SymbolTable.contains((structName,"global")))
-		SemanticError("struct \""+structName+"\" already declared in scope \"global\"")
-	      else
-		SymbolTable.place((structName,scope),struct)
-	    case _ => {} //throw exception
-	  }
-	case MethodDeclaration(methodType,methodName,parameterList,codeBlock) => attributes.scope match{
-	  case Some(scope) => 
-	    if (SymbolTable.containsName(methodName))
-	      SemanticError("method \""+methodName+"\" already declared in scope \"global\"")
-	    else
-	      SymbolTable.place((methodName,scope),(methodType,attributeListToAttribute(parameterList)))
-	  case _ => {} //..throw exception
-	}
-
-	//call declarations semantic action
-	//declaration()
-      }) //end foreach
-    }    
+      val semanticAttributes = SemanticAttributes(Some(name)) //attributes with the name of the scope
+      declarations.foreach(d => d.semanticAction(semanticAttributes))
+    }
   )
-
 }
 
-abstract class Declaration extends KDecafAST
+abstract class Declaration extends KDecafAST with SemanticRule{
+  val name:String
+  
+  // don't allow duplicate names of variables
+  val validateDuplicates = (attributes: SemanticAttributes) => {      
+    //val scope = attributesToScope(attributes)
+    if (SymbolTable.contains((name,attributes)))
+      SemanticError(name+"\" already declared in scope \"global\"")
+  }
+}
 
-case class VarDeclaration(val varType:VarType, val id:String) extends Declaration{
-  val children:List[KDecafAST] = List(id,varType)
+case class VarDeclaration(val varType:VarType, val name:String) extends Declaration{
+  val children:List[KDecafAST] = List(name,varType)
+
+  val semanticAction = SemanticAction(
+    (attributes: SemanticAttributes) => {
+      validateDuplicates(attributes)
+      SymbolTable.put((name,attributes),varType) //place this symbol in SymTable
+    }
+  )
 }
 
 case class StructDeclaration(val name:String, val value:Struct) extends Declaration{  
   val children:List[KDecafAST] = List(name,value) 
 
   def getUnderlyingType:String = "Struct"
+
+  //validate inner elements
+  val semanticAction = SemanticAction(
+    (attributes: SemanticAttributes) => {
+      validateDuplicates(attributes)
+      SymbolTable.put((name,attributes),value) //place this symbol in SymTable
+      value.semanticAction(name) //validate the struct, no duplicates inside
+    }
+  )
 }
 
 case class MethodDeclaration(val methodType:VarType,val name:String,val parameters:List[Parameter],val codeBlock:Block) extends Declaration{
   val children:List[KDecafAST] = List[KDecafAST](methodType,name)++parameters:+codeBlock  
+
+  val semanticAction = SemanticAction(
+    (attributes : SemanticAttributes) => {
+      validateDuplicates(attributes)
+
+      //check no duplicates in parameter names
+      val ps = parameters.map(_.name)
+      if (ps.diff(ps.toSet.toSeq) != Nil) //ugly code, TODO: write a "nub" instead
+	SemanticError("duplicate parameter names found in method "+name)
+      
+      codeBlock.semanticAction(attributes)
+      
+      val symbolAttributes: SymbolAttributes = (methodType,parameters)
+      SymbolTable.place((name,attributes),symbolAttributes)
+    }
+  )
 }
 
 trait VarType extends Expression{
@@ -105,8 +119,15 @@ case class KArray[U](implicit m:Manifest[U]) extends TypeConstructor[U]{
   override def toString = "KArray["+m.toString+"]"
 }
 
-case class Struct(val value:List[VarDeclaration]) extends TypeConstructor[List[VarDeclaration]]{
+case class Struct(val value:List[VarDeclaration]) extends TypeConstructor[List[VarDeclaration]] with SemanticRule{
   override val children = value
+
+  val semanticAction = SemanticAction(
+    (attributes: SemanticAttributes) => {
+      //perform a semantic action in each one
+      value.foreach( _.semanticAction(attributes))
+    }
+  )
 }
 
 abstract class Parameter extends KDecafAST{
@@ -115,12 +136,18 @@ abstract class Parameter extends KDecafAST{
   override val children:List[KDecafAST] = List(varType,name)
 }
 
-case class PrimitiveTypeParameter(val varType:PrimitiveType[_], val name:String) extends Parameter
+case class PrimitiveTypeParameter(val varType:PrimitiveType[AnyVal], val name:String) extends Parameter
 
-case class PrimitiveArrayParameter(val varType:PrimitiveType[_], val name:String) extends Parameter
+case class PrimitiveArrayParameter(val varType:PrimitiveType[AnyVal], val name:String) extends Parameter
 
-case class Block(val varDeclarations:List[VarDeclaration], val statements:List[Statement]) extends Statement{
+case class Block(val varDeclarations:List[VarDeclaration], val statements:List[Statement]) extends Statement with SemanticRule{
   override val children:List[KDecafAST] = varDeclarations++statements
+
+  val semanticAction = SemanticAction(
+    (attributes: SemanticAttributes) => {
+      //TODO
+    }
+  )
 }
 
 abstract class Statement extends KDecafAST{

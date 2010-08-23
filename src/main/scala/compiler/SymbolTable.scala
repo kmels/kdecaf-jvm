@@ -24,3 +24,4 @@ abstract class SymbolAttributes
 case class SymbolAttribute(val node:Attribute) extends SymbolAttributes
 
 case class SymbolAttributes2(val node:(Attribute,Attribute)) extends SymbolAttributes
+

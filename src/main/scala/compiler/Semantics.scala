@@ -13,9 +13,19 @@ import typeAliases._
  * @since 2.0
  */
 trait SemanticRule{
+  import typeAliases.Scope
+
   implicit def nodeToAttribute(x:Attribute):SymbolAttributes = SymbolAttribute(x)
   implicit def nodeTupleToAttribute(x:(Attribute,Attribute)):SymbolAttributes = SymbolAttributes2(x)
+  implicit def nodeTupleWithListToAttribute[T](x:(Attribute,T))(implicit conv: T => Attribute) = SymbolAttributes2((conv(x._2),conv(x._2)))
+
   implicit def attributeListToAttribute(xs:List[Attribute]):Attribute = AttributeList(xs)
+
+  implicit def attributesToScope(a:SemanticAttributes):Scope = a.scope match{
+    case Some(scope) => scope
+    case _ => throw new InternalError("scope expected.")
+  }
+  implicit def scopeToAttributes(s:String):SemanticAttributes = SemanticAttributes(Some(s))
   
   def SemanticAction(f: SemanticAttributes => Unit) = new SemanticAction{
     def apply(attributes: SemanticAttributes) = f(attributes)
