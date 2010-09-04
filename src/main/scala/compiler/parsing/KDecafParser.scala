@@ -16,11 +16,11 @@ import ast._
 class KDecafParser extends StandardTokenParsers with PackratParsers{  
   override val lexical = new KDecafLexer
   
-  lazy val program:PackratParser[Program] = "class" ~> ident ~ declarations ^^ { case programName~declarations => Program(programName,declarations)}
+  lazy val program:PackratParser[Program] = positioned("class" ~> ident ~ declarations ^^ { case programName~declarations => Program(programName,declarations)})
 
   lazy val declarations:PackratParser[List[Declaration]] = "{" ~> rep(declaration) <~ "}"
 
-  lazy val declaration:PackratParser[Declaration] = varDeclaration | structDeclaration | methodDeclaration 
+  lazy val declaration:PackratParser[Declaration] = varDeclaration | structDeclaration | methodDeclaration
 
   lazy val varDeclarations:PackratParser[List[VarDeclaration]] = "{" ~> rep(varDeclaration) <~ "}"
 
@@ -40,7 +40,7 @@ class KDecafParser extends StandardTokenParsers with PackratParsers{
   
   lazy val varArrayDeclaration:PackratParser[VarDeclaration] = varType ~ ident ~ arraySizeDeclaration ^^ {
     case varType~id~arraySize => {
-      val array = varType.getUnderlyingType match{
+      val array = varType.getUnderlyingType() match{
 	case "None" => KArray()
 	case "Int" => KArray[Int]()
 	case "Char" => KArray[Char]()

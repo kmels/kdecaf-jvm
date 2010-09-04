@@ -36,6 +36,11 @@ trait SemanticRule{
   val semanticAction:SemanticAction
 }
 
+trait NoSemanticAction extends SemanticRule{
+  val semanticAction = SemanticAction(
+    attributes => {}
+  )
+}
 trait SemanticResult
 
 case class SemanticAttributes(val scope:Option[String])

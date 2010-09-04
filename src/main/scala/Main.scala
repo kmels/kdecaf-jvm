@@ -1,5 +1,6 @@
 object Main extends Application{
-  val input = io.Source.fromFile("/home/kmels/decaf").mkString
+  val input = io.Source.fromFile("/home/kmels/tmp/decaf").mkString
+
   println("Input: \n"+input+"\n\n")
   import util.parsing.combinator.{lexical,syntactical}
   val result = new compiler.parsing.KDecafParser() parse(input)
@@ -10,8 +11,10 @@ object Main extends Application{
 
   val program:Program = result.get
 
+  println("MMMMMM!")
   try {    
-    program.semanticAction(compiler.semantics.SemanticAttributes(Some("global")))
+    println("No semantics!")
+    //program.semanticAction(compiler.semantics.SemanticAttributes(Some("global")))
   } catch{
     case e => println(e.toString)
   }

@@ -17,6 +17,11 @@ object SymbolTable extends HashMap[Symbol,SymbolAttributes]{
   }
 
   def containsName(name:String):Boolean = this.keySet.exists(_._1==name)
+
+  def getSymbolName(name:String):Option[SymbolAttributes] = this.find(_._1._1 == name) match{
+    case Some(symbolToSymbolAttributes) => Some(symbolToSymbolAttributes._2)
+    case _ => None    
+  }
 }
 
 abstract class SymbolAttributes
