@@ -1,8 +1,8 @@
-package compiler
+package kmels.uvg.kdecaf.compiler
 
 import scala.collection.mutable.HashMap
-import compiler.parsing.ast._
-import compiler.types.{aliases => typeAliases,AttributeList}
+import parsing.ast._
+import types.{aliases => typeAliases,AttributeList}
 import typeAliases._
 
 /*

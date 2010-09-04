@@ -1,4 +1,4 @@
-package compiler.parsing
+package kmels.uvg.kdecaf.compiler.parsing
 
 import scala.util.parsing.combinator.lexical.StdLexical
 import scala.util.parsing.input.CharSequenceReader.EofCh

@@ -1,4 +1,4 @@
-package gui
+package kmels.uvg.kdecaf.gui
 
 import scala.swing._
 import swing.event._

@@ -1,10 +1,11 @@
-package gui.panels
+package kmels.uvg.kdecaf.gui.panels
 
 import scala.swing.{BoxPanel,Orientation,Button,Component}
 import java.awt.Dimension
 import swing.event.ButtonClicked
+import kmels.uvg.kdecaf.compiler
 import compiler.parsing.KDecafParser
-import compiler.parsing.ast.{KDecafAST,Program}
+import compiler.parsing.ast.{Node,Program}
 
 object LeftPanel extends BoxPanel(Orientation.Vertical){
   object importFileButton extends Button("Import file"){
@@ -51,7 +52,7 @@ object LeftPanel extends BoxPanel(Orientation.Vertical){
       
       if (result.successful){
 	val tree:Program = result.get
-	val newTree = new TreePane[KDecafAST](tree,_.children)
+	val newTree = new TreePane[Node](tree,_.children)
 	val model:javax.swing.tree.TreeModel = newTree.contents(0).peer.asInstanceOf[javax.swing.JTree].getModel
 	contents(2).asInstanceOf[TreePane[_]].contents(0).peer.asInstanceOf[javax.swing.JTree].setModel(model)
       }else{

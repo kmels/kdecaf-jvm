@@ -1,8 +1,8 @@
-package compiler.parsing.ast
+package kmels.uvg.kdecaf.compiler.parsing.ast
 
-import compiler._
+import kmels.uvg.kdecaf.compiler._
 import semantics._
-import compiler.types.{aliases => typeAliases,AttributeList}
+import kmels.uvg.kdecaf.compiler.types.{aliases => typeAliases,AttributeList}
 import typeAliases._
 import scala.util.parsing.input.{Positional,Position}
 
@@ -16,14 +16,14 @@ import scala.util.parsing.input.{Positional,Position}
  * @version 2.0
  * @since 1.0
  */
-trait KDecafAST extends Positional{
+trait Node extends Positional{
   override def toString = getClass.getName
-  implicit def s(s:String):KDecafAST = new StringWrapper(s)
+  implicit def s(s:String):Node = new StringWrapper(s)
 
-  val children: List[KDecafAST]   
+  val children: List[Node]   
 
   //string wrapper for listing nodes
-  class StringWrapper(val s:String) extends KDecafAST{
+  class StringWrapper(val s:String) extends Node{
     val children = Nil
     override def toString = s
   }
@@ -49,7 +49,7 @@ trait NoInnerType extends InnerType{
   val getUnderlyingType = () => "Nothing"
 }
 
-case class Program(val name:String, val declarations:List[Declaration]) extends KDecafAST with SemanticRule{ 
+case class Program(val name:String, val declarations:List[Declaration]) extends Node with SemanticRule{ 
   val children = declarations
 
   val semanticAction = SemanticAction(
@@ -60,7 +60,7 @@ case class Program(val name:String, val declarations:List[Declaration]) extends 
   )
 }
 
-abstract class Declaration extends KDecafAST with SemanticRule{
+abstract class Declaration extends Node with SemanticRule{
   val name:String
   
   // don't allow duplicate names of variables
@@ -72,7 +72,7 @@ abstract class Declaration extends KDecafAST with SemanticRule{
 }
 
 case class VarDeclaration(val varType:VarType, val name:String) extends Declaration{
-  val children:List[KDecafAST] = List(name,varType)
+  val children:List[Node] = List(name,varType)
 
   val semanticAction = SemanticAction(
     (attributes: SemanticAttributes) => {
@@ -83,7 +83,7 @@ case class VarDeclaration(val varType:VarType, val name:String) extends Declarat
 }
 
 case class StructDeclaration(val name:String, val value:Struct) extends Declaration{  
-  val children:List[KDecafAST] = List(name,value) 
+  val children:List[Node] = List(name,value) 
 
   val getUnderlyingType = () => "Struct"
 
@@ -98,7 +98,7 @@ case class StructDeclaration(val name:String, val value:Struct) extends Declarat
 }
 
 case class MethodDeclaration(val methodType:VarType,val name:String,val parameters:List[Parameter],val codeBlock:Block) extends Declaration{
-  val children:List[KDecafAST] = List[KDecafAST](methodType,name)++parameters:+codeBlock  
+  val children:List[Node] = List[Node](methodType,name)++parameters:+codeBlock  
 
   val semanticAction = SemanticAction(
     (attributes : SemanticAttributes) => {
@@ -118,7 +118,7 @@ case class MethodDeclaration(val methodType:VarType,val name:String,val paramete
 }
 
 trait VarType extends Expression with InnerType{
-  val children:List[KDecafAST] = Nil
+  val children:List[Node] = Nil
 }
 
 class PrimitiveType[+T](implicit m:Manifest[T]) extends VarType with NoSemanticAction with InnerType{
@@ -167,10 +167,10 @@ case class Struct(val value:List[VarDeclaration]) extends TypeConstructor[List[V
   val getUnderlyingType = () => value.mkString(",")
 }
 
-abstract class Parameter extends KDecafAST{
+abstract class Parameter extends Node{
   val varType:PrimitiveType[_]
   val name:String
-  override val children:List[KDecafAST] = List(varType,name)
+  override val children:List[Node] = List(varType,name)
 }
 
 case class PrimitiveTypeParameter(val varType:PrimitiveType[AnyVal], val name:String) extends Parameter
@@ -178,7 +178,7 @@ case class PrimitiveTypeParameter(val varType:PrimitiveType[AnyVal], val name:St
 case class PrimitiveArrayParameter(val varType:PrimitiveType[AnyVal], val name:String) extends Parameter
 
 case class Block(val varDeclarations:List[VarDeclaration], val statements:List[Statement]) extends Statement with SemanticRule{
-  override val children:List[KDecafAST] = varDeclarations++statements
+  override val children:List[Node] = varDeclarations++statements
 
   val semanticAction = SemanticAction(
     (attributes: SemanticAttributes) => {
@@ -188,8 +188,8 @@ case class Block(val varDeclarations:List[VarDeclaration], val statements:List[S
   )
 }
 
-abstract class Statement extends KDecafAST with SemanticRule{
-  val children:List[KDecafAST]
+abstract class Statement extends Node with SemanticRule{
+  val children:List[Node]
 }
 
 trait ConditionStatement extends Statement{
@@ -212,18 +212,18 @@ trait ConditionStatement extends Statement{
 }
 
 case class IfStatement(val expression:Expression,val codeBlock:Block, val elseBlock:Option[Block] = None) extends ConditionStatement{
-  val children:List[KDecafAST] = elseBlock match{
+  val children:List[Node] = elseBlock match{
     case Some(elseBlock) => List(expression,codeBlock,elseBlock)
     case _ => List(expression,codeBlock)
   }  
 }
 
 case class WhileStatement(val expression:Expression,val codeBlock:Block) extends ConditionStatement{
-  val children:List[KDecafAST] = List(expression,codeBlock)
+  val children:List[Node] = List(expression,codeBlock)
 }
 
 case class MethodCall(val name:String,val arguments:List[Expression]) extends Expression{
-  val children:List[KDecafAST] = List[KDecafAST](name)++arguments
+  val children:List[Node] = List[Node](name)++arguments
 
   val getUnderlyingType = () => "void"
 
@@ -253,7 +253,7 @@ case class MethodCall(val name:String,val arguments:List[Expression]) extends Ex
 }
 
 case class ReturnStatement(val expression:Option[Expression]) extends Statement{
-  val children:List[KDecafAST] = expression match{
+  val children:List[Node] = expression match{
     case Some(exp) => List(exp)
     case _ => Nil
   }
@@ -282,7 +282,7 @@ case class ReturnStatement(val expression:Option[Expression]) extends Statement{
 }
 
 case class Assignment(val location:Location,val expression:Expression) extends Statement{
-  val children:List[KDecafAST] = List(location,expression)
+  val children:List[Node] = List(location,expression)
 
   val semanticAction = SemanticAction(
     attributes => {
@@ -309,7 +309,7 @@ abstract class Location extends Expression with InnerType{
 }
 
 case class SimpleLocation(val name:String, val optionalMember:Option[Location] = None) extends Location {
-  val children:List[KDecafAST] = optionalMember match{
+  val children:List[Node] = optionalMember match{
     case Some(member) => List(name,member)
     case _ => List(s(name))
   }  
@@ -317,13 +317,13 @@ case class SimpleLocation(val name:String, val optionalMember:Option[Location] =
   //semantic action must be, assert on the existence of Some(optionalMember
   val semanticAction = SemanticAction(
     attributes => {
-      throw SemanticError("pendiente")
+      throw SemanticError(this+" pendiente")
     }
   )
 }
 
 case class ArrayLocation(val name:String, val index:Expression, val optionalMember:Option[Location] = None) extends Location{
-  val children:List[KDecafAST] = optionalMember match{
+  val children:List[Node] = optionalMember match{
     case Some(member) => List(name,index,member)
     case _ => List(name)
   }
@@ -332,7 +332,7 @@ case class ArrayLocation(val name:String, val index:Expression, val optionalMemb
 
   val semanticAction = SemanticAction(
     attributes => {
-      throw SemanticError("pendiente")
+      throw SemanticError(this+"pendiente")
     }
   )
 }
@@ -410,11 +410,11 @@ case class CharLiteral(val literal:Char)(implicit val m:Manifest[Char]) extends 
 case class BoolLiteral(val literal:Boolean)(implicit val m:Manifest[Boolean]) extends Literal[Boolean] with InnerBool with SemanticActionPendiente
 
 trait SemanticActionPendiente extends SemanticRule{
-  self: KDecafAST =>
+  self: Node =>
 
   val semanticAction = SemanticAction(
     attributes => {
-      throw SemanticError("pendiente")
+      throw SemanticError(this+"pendiente")
     }
   )
 }

@@ -1,10 +1,11 @@
-package compiler.types
-import compiler.parsing.ast.KDecafAST
+package kmels.uvg.kdecaf.compiler.types
+
+import kmels.uvg.kdecaf.compiler.parsing.ast.Node
 
 package object aliases {
   type Scope = String //scope name
   type Symbol = (String,Scope) //symbol name, scope
-  type Attribute = KDecafAST   
+  type Attribute = Node
 }
 
 import aliases._

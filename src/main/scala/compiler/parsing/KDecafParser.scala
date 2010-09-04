@@ -1,10 +1,11 @@
-package compiler.parsing
+package kmels.uvg.kdecaf.compiler.parsing
 
 import scala.util.parsing.combinator.{syntactical,PackratParsers}
 import syntactical.{StandardTokenParsers}
 import scala.util.parsing.input.CharArrayReader.EofCh
+import kmels.uvg.kdecaf.compiler
 import compiler.SymbolTable
-import ast._
+import compiler.parsing.ast._
 
 /**
  * A Parser for the Decaf language

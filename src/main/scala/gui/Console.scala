@@ -1,4 +1,4 @@
-package gui.panels
+package kmels.uvg.kdecaf.gui.panels
 
 import scala.swing.{TextArea,ScrollPane,TabbedPane}
 /**

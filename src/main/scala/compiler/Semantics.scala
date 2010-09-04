@@ -1,8 +1,8 @@
-package compiler.semantics
+package kmels.uvg.kdecaf.compiler.semantics
 
-import compiler.{SymbolAttribute,SymbolAttributes,SymbolAttributes2}
-import compiler.parsing.ast.KDecafAST
-import compiler.types.{aliases => typeAliases,AttributeList}
+import kmels.uvg.kdecaf.compiler.{SymbolAttribute,SymbolAttributes,SymbolAttributes2}
+import kmels.uvg.kdecaf.compiler.parsing.ast.Node
+import kmels.uvg.kdecaf.compiler.types.{aliases => typeAliases,AttributeList}
 import typeAliases._
 
 /**
@@ -13,7 +13,7 @@ import typeAliases._
  * @since 2.0
  */
 trait SemanticRule{
-  self: KDecafAST =>
+  self: Node =>
 
   import typeAliases.Scope
 
@@ -39,7 +39,7 @@ trait SemanticRule{
 }
 
 trait NoSemanticAction extends SemanticRule{
-  self: KDecafAST => 
+  self: Node => 
 
   val semanticAction = SemanticAction(
     attributes => {}
@@ -51,6 +51,6 @@ case class SemanticAttributes(val scope:Option[String])
 
 abstract class SemanticAction extends (SemanticAttributes => Unit) with SemanticResult
 
-case class SemanticError(val message:String,val node:KDecafAST) extends Exception with SemanticResult{
-  override def toString = message +" in line "+ node.pos.line.toString
+case class SemanticError(val message:String,val node:Node) extends Exception with SemanticResult{
+  override def toString = message +" in line "+ node.pos.line+", column: "+node.pos.column
 }
