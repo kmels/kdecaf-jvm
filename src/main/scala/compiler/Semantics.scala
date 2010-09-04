@@ -13,6 +13,8 @@ import typeAliases._
  * @since 2.0
  */
 trait SemanticRule{
+  self: KDecafAST =>
+
   import typeAliases.Scope
 
   implicit def nodeToAttribute(x:Attribute):SymbolAttributes = SymbolAttribute(x)
@@ -31,12 +33,14 @@ trait SemanticRule{
     def apply(attributes: SemanticAttributes) = f(attributes)
   }
 
-  def SemanticError(message: String) = new SemanticError(message)
+  def SemanticError(message: String) = new SemanticError(message,this)
 
   val semanticAction:SemanticAction
 }
 
 trait NoSemanticAction extends SemanticRule{
+  self: KDecafAST => 
+
   val semanticAction = SemanticAction(
     attributes => {}
   )
@@ -47,6 +51,6 @@ case class SemanticAttributes(val scope:Option[String])
 
 abstract class SemanticAction extends (SemanticAttributes => Unit) with SemanticResult
 
-case class SemanticError(val message:String) extends Exception with SemanticResult{
-  override def toString = message
+case class SemanticError(val message:String,val node:KDecafAST) extends Exception with SemanticResult{
+  override def toString = message +" in line "+ node.pos.line.toString
 }

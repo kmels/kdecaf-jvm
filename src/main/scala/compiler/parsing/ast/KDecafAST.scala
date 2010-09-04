@@ -201,8 +201,8 @@ trait ConditionStatement extends Statement{
     (attributes : SemanticAttributes) => {
       //expression has to be reducible to true or false
       expression.getUnderlyingType() match{
-	case "Bool" => {} //is good, do nothing
-	case innerType => throw SemanticError("expression of type Bool needed but "+innerType+" was found")
+	case "Boolean" => {} //is good, do nothing
+	case innerType => throw SemanticError("expression of type Boolean needed but "+innerType+" was found")
       }	
 
       //check code block as well
@@ -410,6 +410,8 @@ case class CharLiteral(val literal:Char)(implicit val m:Manifest[Char]) extends 
 case class BoolLiteral(val literal:Boolean)(implicit val m:Manifest[Boolean]) extends Literal[Boolean] with InnerBool with SemanticActionPendiente
 
 trait SemanticActionPendiente extends SemanticRule{
+  self: KDecafAST =>
+
   val semanticAction = SemanticAction(
     attributes => {
       throw SemanticError("pendiente")

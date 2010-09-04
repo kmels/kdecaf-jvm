@@ -14,7 +14,7 @@ object Main extends Application{
   println("MMMMMM!")
   try {    
     println("No semantics!")
-    //program.semanticAction(compiler.semantics.SemanticAttributes(Some("global")))
+    program.semanticAction(compiler.semantics.SemanticAttributes(Some("global")))
   } catch{
     case e => println(e.toString)
   }
