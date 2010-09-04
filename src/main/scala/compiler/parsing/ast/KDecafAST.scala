@@ -109,10 +109,10 @@ case class MethodDeclaration(val methodType:VarType,val name:String,val paramete
       if (ps.diff(ps.toSet.toSeq) != Nil) //ugly code, TODO: write a "nub" function instead
 	SemanticError("duplicate parameter names found in method "+name)
       
-      codeBlock.semanticAction(attributes)
-      
-      val symbolAttributes: SymbolAttributes = (methodType,parameters)
-      SymbolTable.place((name,attributes),symbolAttributes)
+      //val symbolAttributes: SymbolAttributes = (methodType,parameters)      
+      SymbolTable.put((this.name,attributes),this)
+      println("Metio metodo! "+this.name)
+      codeBlock.semanticAction(SemanticAttributes(Some(this.name)))            
     }
   )
 }
@@ -233,7 +233,7 @@ case class MethodCall(val name:String,val arguments:List[Expression]) extends Ex
   val semanticAction = SemanticAction(
     attributes => {
       //the method name must exist and it must be of type MethodDeclaration, and the number of the arguments must be the same and of the same type
-      SymbolTable.get((this.name,"global")) match {
+      SymbolTable.get((this.name,"Program")) match { //this is HARDCODED! attributes.scope should be List[Scope]
 	case Some(attributes) => attributes match{
 	  case method:MethodDeclaration => {
 	    if (arguments.size!=method.parameters.size)
@@ -264,21 +264,21 @@ case class ReturnStatement(val expression:Option[Expression]) extends Statement{
   val semanticAction = SemanticAction(
     attributes => {
       //the type of the return expression must be the same as declared in method declaration
-      SymbolTable.get((attributes,"global")) match{
-	case Some(attributes) => attributes match {
+      SymbolTable.get((attributes,"Program")) match{ //HARDCODED, see this#MethodCall#semanticAction
+	case Some(node) => node match {
 	  case method:MethodDeclaration => {
 	    expression match{
 	      case Some(exp) => 
 		if (method.methodType.getUnderlyingType != exp.getUnderlyingType)
-		  throw SemanticError("the type of "+expression+" must be "+method.methodType.getUnderlyingType+"; found: "+exp.getUnderlyingType)
+		  throw SemanticError("the type of "+expression+" must be "+method.methodType.getUnderlyingType()+"; found: "+exp.getUnderlyingType())
 	      case _ => 
 		if (method.methodType.getUnderlyingType != "void")
-		  throw SemanticError("the type of "+expression+" must be "+method.methodType.getUnderlyingType+"; found: void")
+		  throw SemanticError("the type of "+expression+" must be "+method.methodType.getUnderlyingType()+"; found: void")
 	    }	    	    
 	  }
-	  case _ => throw SemanticError(attributes+" is not a method")
+	  case _ => throw SemanticError("could not found the return type of the method-. Found pseudo-method: "+node+" .. ")
 	}
-	case _ => throw SemanticError("cannot find symbol for this statement: return "+expression)
+	case _ => throw SemanticError("cannot find symbol for this statement: return "+expression+" attributes: "+attributes)
       }
     }
   )
@@ -289,8 +289,8 @@ case class Assignment(val location:Location,val expression:Expression) extends S
 
   val semanticAction = SemanticAction(
     attributes => {
-      if (location.getUnderlyingType != expression.getUnderlyingType)
-	throw SemanticError("cannot assign expression of type "+expression.getUnderlyingType+" to "+location.name+" of declared type "+location.getUnderlyingType)
+      if (location.getUnderlyingType() != expression.getUnderlyingType())
+	throw SemanticError("cannot assign expression of type "+expression.getUnderlyingType()+" to "+location.name+" of declared type "+location.getUnderlyingType())
     }
   )
 }
@@ -302,7 +302,7 @@ abstract class Location extends Expression with InnerType{
   val getUnderlyingType: () => String = () => optionalMember match{
     case Some(member) => member.getUnderlyingType()
     case _ => SymbolTable.getSymbolName(this.name) match{
-      case Some(symbolAttributes) => symbolAttributes match{
+      case Some(node) => node match{
 	case symbolWithInnerType:InnerType => symbolWithInnerType.getUnderlyingType()
 	case _ => throw SemanticError("Internal problem: "+name+" must have an inner type")
       }

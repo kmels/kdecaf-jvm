@@ -11,22 +11,28 @@ import typeAliases._
  * @author Carlos Lopez
 */
 //object SymbolTable extends HashMap[(String,String),KDecafAST { def getUnderlyingType:String}]{
-object SymbolTable extends HashMap[Symbol,SymbolAttributes]{     
-  def place(symbol:Symbol, attributes:SymbolAttributes):Option[SymbolAttributes] = { 
-    put(symbol,attributes)
-  }
+object SymbolTable extends HashMap[Symbol,Node]{     
+  //def place(symbol:Symbol, attributes:SymbolAttributes):Option[SymbolAttributes] = { 
+  //  put(symbol,attributes)
+ // }
 
   def containsName(name:String):Boolean = this.keySet.exists(_._1==name)
 
-  def getSymbolName(name:String):Option[SymbolAttributes] = this.find(_._1._1 == name) match{
+  def getSymbolName(name:String):Option[Node] = this.find(_._1._1 == name) match{
     case Some(symbolToSymbolAttributes) => Some(symbolToSymbolAttributes._2)
     case _ => None    
   }
 }
 
-abstract class SymbolAttributes
+/*abstract class SymbolAttributes{
+  val getNode: () => Attribute
+  val node:Any
+}
 
-case class SymbolAttribute(val node:Attribute) extends SymbolAttributes
+case class SymbolAttribute(val node:Attribute) extends SymbolAttributes{
+  val getNode = () => node
+}
 
-case class SymbolAttributes2(val node:(Attribute,Attribute)) extends SymbolAttributes
-
+case class SymbolAttributes2(val node:(Attribute,Attribute)) extends SymbolAttributes{
+  val getNode = () => node._1
+}*/

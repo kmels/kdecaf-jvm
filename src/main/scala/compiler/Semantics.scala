@@ -1,6 +1,6 @@
 package kmels.uvg.kdecaf.compiler.semantics
 
-import kmels.uvg.kdecaf.compiler.{SymbolAttribute,SymbolAttributes,SymbolAttributes2}
+//import kmels.uvg.kdecaf.compiler.{SymbolAttribute,SymbolAttributes,SymbolAttributes2}
 import kmels.uvg.kdecaf.compiler.parsing.ast.Node
 import kmels.uvg.kdecaf.compiler.types.{aliases => typeAliases,AttributeList}
 import typeAliases._
@@ -17,10 +17,10 @@ trait SemanticRule{
 
   import typeAliases.Scope
 
-  implicit def nodeToAttribute(x:Attribute):SymbolAttributes = SymbolAttribute(x)
+  /*implicit def nodeToAttribute(x:Attribute):SymbolAttributes = SymbolAttribute(x)
   implicit def nodeTupleToAttribute(x:(Attribute,Attribute)):SymbolAttributes = SymbolAttributes2(x)
   implicit def nodeTupleWithListToAttribute[T](x:(Attribute,T))(implicit conv: T => Attribute) = SymbolAttributes2((conv(x._2),conv(x._2)))
-
+  implicit def symbolAttributesToAttribute(x:SymbolAttribute):Attribute = x.node*/
   implicit def attributeListToAttribute(xs:List[Attribute]):Attribute = AttributeList(xs)
 
   implicit def attributesToScope(a:SemanticAttributes):Scope = a.scope match{

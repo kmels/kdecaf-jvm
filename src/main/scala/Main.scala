@@ -4,7 +4,7 @@ import kmels.uvg.kdecaf.compiler.parsing.KDecafParser
 import kmels.uvg.kdecaf.compiler.parsing.ast.Program
 
 object Main extends Application{
-  val input = io.Source.fromFile("/home/kmels/tmp/decaf").mkString
+  val input = io.Source.fromFile("/home/kmels/tmp/decaf-semantics").mkString
 
   println("Input: \n"+input+"\n\n")
   import util.parsing.combinator.{lexical,syntactical}
