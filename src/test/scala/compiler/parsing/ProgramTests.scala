@@ -1,8 +1,8 @@
-package compiler.parsing.test
+package kmels.uvg.kdecaf.compiler.parsing.test
 
 import org.scalatest.Spec
 import org.scalatest.matchers.MustMatchers
-import compiler.parsing.ast._
+import kmels.uvg.kdecaf.compiler.parsing.ast._
 
 /**
  * A parsing test for a Program

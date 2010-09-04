@@ -1,11 +1,11 @@
-package compiler.parsing.test
+package kmels.uvg.kdecaf.compiler.parsing.test
 
 import org.scalatest.FunSuite
 import org.scalatest.matchers.MustMatchers
 import scala.util.parsing.combinator.{lexical,syntactical}
 import lexical.Scanners
-import compiler.parsing.{KDecafParser}
-import compiler.parsing.KDecafLexer
+import kmels.uvg.kdecaf.compiler.parsing.{KDecafParser}
+import kmels.uvg.kdecaf.compiler.parsing.KDecafLexer
 
 /**
  * A trait for testing parsers

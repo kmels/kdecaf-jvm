@@ -1,7 +1,7 @@
-package compiler.parsing.test
+package kmels.uvg.kdecaf.compiler.parsing.test
 
 import org.scalatest.FunSuite
-import compiler.parsing.ast.{Location,SimpleLocation,ArrayLocation}
+import kmels.uvg.kdecaf.compiler.parsing.ast.{Location,SimpleLocation,ArrayLocation}
 
 /**
  * Parsing tests for location expressions

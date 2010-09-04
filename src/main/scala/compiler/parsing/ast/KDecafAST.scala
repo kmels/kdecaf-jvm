@@ -183,7 +183,10 @@ case class Block(val varDeclarations:List[VarDeclaration], val statements:List[S
   val semanticAction = SemanticAction(
     (attributes: SemanticAttributes) => {
       varDeclarations.foreach( _.semanticAction(attributes))
-      statements.foreach(_.semanticAction(attributes))
+      statements.foreach(_ match{
+	case illegalLocation:Location => throw SemanticError("Illegal location statement: "+illegalLocation)
+	case legalStatement => legalStatement.semanticAction(attributes)
+      })
     }
   )
 }
