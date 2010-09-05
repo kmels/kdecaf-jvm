@@ -2,20 +2,16 @@ package kmels.uvg.kdecaf.compiler
 
 import scala.collection.mutable.HashMap
 import parsing.ast._
-import types.{aliases => typeAliases,AttributeList}
-import typeAliases._
+import types.aliases._
 
 /*
  * The Symbols table
  *
  * @author Carlos Lopez
 */
-//object SymbolTable extends HashMap[(String,String),KDecafAST { def getUnderlyingType:String}]{
-object SymbolTable extends HashMap[Symbol,Node]{     
-  //def place(symbol:Symbol, attributes:SymbolAttributes):Option[SymbolAttributes] = { 
-  //  put(symbol,attributes)
- // }
+object SymbolTable extends SymbolTable
 
+trait SymbolTable extends HashMap[Symbol,Node]{
   def containsName(name:String):Boolean = this.keySet.exists(_._1==name)
 
   def getSymbolName(name:String):Option[Node] = this.find(_._1._1 == name) match{
@@ -23,16 +19,3 @@ object SymbolTable extends HashMap[Symbol,Node]{
     case _ => None    
   }
 }
-
-/*abstract class SymbolAttributes{
-  val getNode: () => Attribute
-  val node:Any
-}
-
-case class SymbolAttribute(val node:Attribute) extends SymbolAttributes{
-  val getNode = () => node
-}
-
-case class SymbolAttributes2(val node:(Attribute,Attribute)) extends SymbolAttributes{
-  val getNode = () => node._1
-}*/

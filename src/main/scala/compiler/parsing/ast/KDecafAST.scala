@@ -2,7 +2,7 @@ package kmels.uvg.kdecaf.compiler.parsing.ast
 
 import kmels.uvg.kdecaf.compiler._
 import semantics._
-import kmels.uvg.kdecaf.compiler.types.{aliases => typeAliases,AttributeList}
+import kmels.uvg.kdecaf.compiler.types.{aliases => typeAliases}
 import typeAliases._
 import scala.util.parsing.input.{Positional,Position}
 
@@ -53,9 +53,20 @@ case class Program(val name:String, val declarations:List[Declaration]) extends 
   val children = declarations
 
   val semanticAction = SemanticAction(
-    (attributes: SemanticAttributes) => {
-      val semanticAttributes = SemanticAttributes(Some(name)) //attributes with the name of the scope
-      declarations.foreach(d => d.semanticAction(semanticAttributes))
+    attributes => {
+      val scope = this.name //attributes with the name of the scope
+      val declarationResults:List[SemanticResult] = declarations.map(_.semanticAction(scope)) //get declaration semantic results
+      
+      //there has to be a method named "main" of type "void" within the declarations
+      val existsMainMethod:Boolean = declarations.exists(declaration => declaration match{
+	case methodDeclaration:MethodDeclaration => methodDeclaration.name == "main" && methodDeclaration.methodType.getUnderlyingType() == "void"
+	case _ => false
+      })
+
+      if (!existsMainMethod)
+	SemanticResults((declarationResults :+ SemanticError(this.name+" must have a method named \"main\" of type void")) : _*)
+      else
+	SemanticResults(declarationResults : _* )
     }
   )
 }
@@ -64,20 +75,25 @@ abstract class Declaration extends Node with SemanticRule{
   val name:String
   
   // don't allow duplicate names of variables
-  val validateDuplicates = (attributes: SemanticAttributes) => {      
-    //val scope = attributesToScope(attributes)
-    if (SymbolTable.contains((name,attributes)))
-      SemanticError(name+"\" already declared in scope \"global\"")
-  }
+  val validateDuplicates: SemanticAction  = SemanticAction(
+    declarationScope => {
+      //val scope = attributesToScope(attributes)
+      if (SymbolTable.contains((name,declarationScope)))
+	SemanticError(name+"\" already declared in scope \""+declarationScope+"\"")
+      else
+	SemanticSuccess
+    }
+  )
 }
 
 case class VarDeclaration(val varType:VarType, val name:String) extends Declaration{
   val children:List[Node] = List(name,varType)
 
   val semanticAction = SemanticAction(
-    (attributes: SemanticAttributes) => {
-      validateDuplicates(attributes)
-      SymbolTable.put((name,attributes),varType) //place this symbol in SymTable
+    varScope => {
+      val duplicatesSemanticResult = validateDuplicates(varScope)
+      SymbolTable.put((name,varScope),varType) //place this symbol in SymTable
+      duplicatesSemanticResult
     }
   )
 }
@@ -89,7 +105,7 @@ case class StructDeclaration(val name:String, val value:Struct) extends Declarat
 
   //validate inner elements
   val semanticAction = SemanticAction(
-    (attributes: SemanticAttributes) => {
+    attributes => {
       validateDuplicates(attributes)
       SymbolTable.put((name,attributes),value) //place this symbol in SymTable
       value.semanticAction(name) //validate the struct, no duplicates inside
@@ -101,8 +117,8 @@ case class MethodDeclaration(val methodType:VarType,val name:String,val paramete
   val children:List[Node] = List[Node](methodType,name)++parameters:+codeBlock  
 
   val semanticAction = SemanticAction(
-    (attributes : SemanticAttributes) => {
-      validateDuplicates(attributes)
+    methodScope => {
+      validateDuplicates(methodScope)
 
       //check no duplicates in parameter names
       val ps = parameters.map(_.name)
@@ -110,9 +126,8 @@ case class MethodDeclaration(val methodType:VarType,val name:String,val paramete
 	SemanticError("duplicate parameter names found in method "+name)
       
       //val symbolAttributes: SymbolAttributes = (methodType,parameters)      
-      SymbolTable.put((this.name,attributes),this)
-      println("Metio metodo! "+this.name)
-      codeBlock.semanticAction(SemanticAttributes(Some(this.name)))            
+      SymbolTable.put((this.name,methodScope),this)
+      codeBlock.semanticAction(this.name)
     }
   )
 }
@@ -137,9 +152,11 @@ object PrimitiveChar extends PrimitiveType[Char]
 //basic types
 case class struct(val name:String) extends VarType { //the name of the struct 
   val semanticAction = SemanticAction(
-    attributes => {
-      if (!(SymbolTable.contains((this.name,attributes)) || SymbolTable.contains((this.name,attributes))))
-	SemanticError("\""+this.name+"\" struct could not be found in scope global or "+attributes.scope)
+    scope => {
+      if (!(SymbolTable.contains((this.name,scope)) || SymbolTable.contains((this.name,scope))))
+	SemanticError("\""+this.name+"\" struct could not be found in scope global or "+scope)
+      else
+	SemanticSuccess
     }
   )
 
@@ -158,9 +175,11 @@ case class Struct(val value:List[VarDeclaration]) extends TypeConstructor[List[V
   override val children = value
 
   val semanticAction = SemanticAction(
-    (attributes: SemanticAttributes) => {
+    scope => {
       //perform a semantic action in each one
-      value.foreach( _.semanticAction(attributes))
+      SemanticResults(
+	value.map( _.semanticAction(scope)) : _*
+      )
     }
   )
 
@@ -181,12 +200,14 @@ case class Block(val varDeclarations:List[VarDeclaration], val statements:List[S
   override val children:List[Node] = varDeclarations++statements
 
   val semanticAction = SemanticAction(
-    (attributes: SemanticAttributes) => {
-      varDeclarations.foreach( _.semanticAction(attributes))
-      statements.foreach(_ match{
-	case illegalLocation:Location => throw SemanticError("Illegal location statement: "+illegalLocation)
-	case legalStatement => legalStatement.semanticAction(attributes)
-      })
+    blockScope => {
+      varDeclarations.foreach( _.semanticAction(blockScope))
+      SemanticResults(
+	statements.map(_ match{
+	  case illegalLocation:Location => SemanticError("Illegal location statement: "+illegalLocation)
+	  case legalStatement => legalStatement.semanticAction(blockScope)
+	}) : _*
+      )
     }
   )
 }
@@ -201,15 +222,15 @@ trait ConditionStatement extends Statement{
   
   //assert on the type of the expression, it has to be boolean
   val semanticAction = SemanticAction(
-    (attributes : SemanticAttributes) => {
+    scope => {
       //expression has to be reducible to true or false
       expression.getUnderlyingType() match{
 	case "Boolean" => {} //is good, do nothing
-	case innerType => throw SemanticError("expression of type Boolean needed but "+innerType+" was found")
+	case innerType => SemanticError("expression of type Boolean needed but "+innerType+" was found")
       }	
-
-      //check code block as well
-    codeBlock.semanticAction(attributes)
+      
+	//check code block as well
+      codeBlock.semanticAction(scope)
     }
   )
 }
@@ -233,23 +254,27 @@ case class MethodCall(val name:String,val arguments:List[Expression]) extends Ex
   val semanticAction = SemanticAction(
     attributes => {
       //the method name must exist and it must be of type MethodDeclaration, and the number of the arguments must be the same and of the same type
-      SymbolTable.get((this.name,"Program")) match { //this is HARDCODED! attributes.scope should be List[Scope]
+      SymbolTable.get((this.name,"global")) match { //this is HARDCODED! attributes.scope should be List[Scope]
 	case Some(attributes) => attributes match{
 	  case method:MethodDeclaration => {
 	    if (arguments.size!=method.parameters.size)
-	      throw SemanticError("the number of arguments do not match the number of the method parameters")
+	      SemanticError("the number of arguments do not match the number of the method parameters")
 	    
-	    arguments.zip(method.parameters).foreach(
-	      argumentAndParameter => {
-		val argument:Expression = argumentAndParameter._1
-		val parameter:Parameter = argumentAndParameter._2
-		if (argument.getUnderlyingType != parameter.varType.getUnderlyingType)
-		  throw SemanticError("Type Error: argument "+argument+" has type "+argument.getUnderlyingType+", expected: "+parameter.varType.getUnderlyingType)
-	      })
+	    SemanticResults(
+	      arguments.zip(method.parameters).map(
+		argumentAndParameter => {
+		  val argument:Expression = argumentAndParameter._1
+		  val parameter:Parameter = argumentAndParameter._2
+		  typesShouldBeEqualIn(
+		    argument,parameter.varType,
+		    "Type Error: argument "+argument+" has type "+argument.getUnderlyingType()+", expected: "+parameter.varType.getUnderlyingType()
+		  )
+		}) : _*
+	    )
 	  }
-	  case _ => throw SemanticError(name+" is not a method")
+	  case _ => SemanticError(name+" is not a method")
 	}
-	case _ => throw SemanticError("the symbol "+name+" could not be found")
+	case _ => SemanticError("the symbol "+name+" could not be found")
       }
     }
   )
@@ -269,16 +294,20 @@ case class ReturnStatement(val expression:Option[Expression]) extends Statement{
 	  case method:MethodDeclaration => {
 	    expression match{
 	      case Some(exp) => 
-		if (method.methodType.getUnderlyingType != exp.getUnderlyingType)
-		  throw SemanticError("the type of "+expression+" must be "+method.methodType.getUnderlyingType()+"; found: "+exp.getUnderlyingType())
+		typesShouldBeEqualIn(
+		  method.methodType,exp,
+		  "the type of "+expression+" must be "+method.methodType.getUnderlyingType()+"; found: "+exp.getUnderlyingType()
+		)
 	      case _ => 
-		if (method.methodType.getUnderlyingType != "void")
-		  throw SemanticError("the type of "+expression+" must be "+method.methodType.getUnderlyingType()+"; found: void")
+		if (method.methodType.getUnderlyingType() != "void")
+		  SemanticError("the type of "+expression+" must be "+method.methodType.getUnderlyingType()+"; found: void")
+		else
+		  SemanticSuccess
 	    }	    	    
 	  }
-	  case _ => throw SemanticError("could not found the return type of the method-. Found pseudo-method: "+node+" .. ")
+	  case _ => SemanticError("could not found the return type of the method-. Found pseudo-method: "+node+" .. ")
 	}
-	case _ => throw SemanticError("cannot find symbol for this statement: return "+expression+" attributes: "+attributes)
+	case _ => SemanticError("cannot find symbol for this statement: return "+expression+" attributes: "+attributes)
       }
     }
   )
@@ -289,8 +318,10 @@ case class Assignment(val location:Location,val expression:Expression) extends S
 
   val semanticAction = SemanticAction(
     attributes => {
-      if (location.getUnderlyingType() != expression.getUnderlyingType())
-	throw SemanticError("cannot assign expression of type "+expression.getUnderlyingType()+" to "+location.name+" of declared type "+location.getUnderlyingType())
+      typesShouldBeEqualIn(
+	location,expression,
+	"cannot assign expression of type "+expression.getUnderlyingType()+" to "+location.name+" of declared type "+location.getUnderlyingType()
+      )
     }
   )
 }
@@ -304,9 +335,9 @@ abstract class Location extends Expression with InnerType{
     case _ => SymbolTable.getSymbolName(this.name) match{
       case Some(node) => node match{
 	case symbolWithInnerType:InnerType => symbolWithInnerType.getUnderlyingType()
-	case _ => throw SemanticError("Internal problem: "+name+" must have an inner type")
+	case _ => "Nothing"
       }
-      case _ => throw SemanticError("cannot find symbol "+this.name)
+      case _ => "Nothing" //can't find symbol in symbol table!
     }
   }
 }
@@ -320,7 +351,7 @@ case class SimpleLocation(val name:String, val optionalMember:Option[Location] =
   //semantic action must be, assert on the existence of Some(optionalMember
   val semanticAction = SemanticAction(
     attributes => {
-      throw SemanticError(this+" pendiente")
+      SemanticError(this+" pendiente")
     }
   )
 }
@@ -335,12 +366,16 @@ case class ArrayLocation(val name:String, val index:Expression, val optionalMemb
 
   val semanticAction = SemanticAction(
     attributes => {
-      throw SemanticError(this+"pendiente")
+      SemanticError(this+"pendiente")
     }
   )
 }
 
 abstract class Expression extends Statement with InnerType with SemanticRule
+
+object EmptyExpression extends Expression with NoInnerType with NoSemanticAction{
+  val children = Nil
+}
 
 abstract class Operator[T]{
   val lexeme:T
@@ -367,10 +402,14 @@ trait BinaryOperation[T] extends ExpressionOperation[T]{
 
   val semanticAction = SemanticAction(
     attributes => {
-      //both exp1 and exp2 must have the same inner type
+      //both exp1 and exp2 must have the same inner type            
 
-      if (exp1.getUnderlyingType != exp2.getUnderlyingType)
-	throw SemanticError("cannot operate "+ exp1 +" and "+exp2 +"; both must be of the same type. Found: "+exp1.getUnderlyingType+" and "+exp2.getUnderlyingType)
+      typesShouldBeEqualIn(
+	exp1,exp2,
+	"cannot operate "+ exp1 +" and "+exp2 +"; both must be of the same type. Found: "+exp1.getUnderlyingType+" and "+exp2.getUnderlyingType
+      )
+//      if (exp1.getUnderlyingType() != exp2.getUnderlyingType())
+//	SemanticError("cannot operate "+ exp1 +" and "+exp2 +"; both must be of the same type. Found: "+exp1.getUnderlyingType+" and "+exp2.getUnderlyingType)
     }
   )
 }
@@ -417,7 +456,7 @@ trait SemanticActionPendiente extends SemanticRule{
 
   val semanticAction = SemanticAction(
     attributes => {
-      throw SemanticError(this+"pendiente")
+      SemanticError(this+"pendiente")
     }
   )
 }

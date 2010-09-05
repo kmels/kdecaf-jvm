@@ -81,7 +81,9 @@ class KDecafParser extends StandardTokenParsers with PackratParsers{
   
   lazy val statements:PackratParser[List[Statement]] =rep(statement)
 
-  lazy val statement:PackratParser[Statement] = positioned(ifStatement | whileStatement | returnStatement | methodCall <~ ";" | block | assignment | expression <~ ";")
+  lazy val statement:PackratParser[Statement] = positioned(ifStatement | whileStatement | returnStatement | methodCall <~ ";" | block | assignment | expressionStatement)
+
+  lazy val expressionStatement:PackratParser[Expression] = expression <~ ";" | ";" ^^ {case ";" => EmptyExpression}
 
   lazy val parenthesisExpression:PackratParser[Expression] = "(" ~> expression <~ ")"
 

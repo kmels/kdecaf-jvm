@@ -1,7 +1,10 @@
 package kmels.uvg.kdecaf.main
 
-import kmels.uvg.kdecaf.compiler.parsing.KDecafParser
-import kmels.uvg.kdecaf.compiler.parsing.ast.Program
+import kmels.uvg.kdecaf.compiler
+import compiler.parsing.{KDecafParser,ast}
+import ast.Program
+import compiler.semantics._
+import compiler.types.aliases.SemanticErrorMessage
 
 object Main extends Application{
   val input = io.Source.fromFile("/home/kmels/tmp/decaf-semantics").mkString
@@ -16,21 +19,21 @@ object Main extends Application{
 
   val program:Program = result.get
 
-  println("MMMMMM!")
-  try {    
-    println("No semantics!")
-    program.semanticAction(kmels.uvg.kdecaf.compiler.semantics.SemanticAttributes(Some("global")))
-  } catch{
-    case e => println("Semantic Error: "+e.toString)
-  }
+  program.semanticAction("global") match{
+    case SemanticResults(results @ _*) => {
+      val errorMessages:List[SemanticErrorMessage] = results.toList.flatMap({ 
+	case error:SemanticError => error.errors.toList
+	case _ => Nil
+      })
 
-  /*.foreach{
-    case SemanticAction(action) => try {
-      action()
-    } catch{
-      case e:SemanticError => println(e.toString)
+      if (errorMessages.size > 0){	
+	println(errorMessages.map(errorMessage => "Type Error:"+errorMessage._2.pos.line+":"+errorMessage._1).mkString("\n"))
+      }	
+      else
+	println("well-typed")
     }
-  }*/
-
+    case _ => println("wtf.")
+  }
+ 
   println("Symbol Table: "+kmels.uvg.kdecaf.compiler.SymbolTable.mkString(",\n"))
 }

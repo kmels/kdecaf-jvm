@@ -1,8 +1,9 @@
 package kmels.uvg.kdecaf.compiler.semantics
 
 //import kmels.uvg.kdecaf.compiler.{SymbolAttribute,SymbolAttributes,SymbolAttributes2}
-import kmels.uvg.kdecaf.compiler.parsing.ast.Node
-import kmels.uvg.kdecaf.compiler.types.{aliases => typeAliases,AttributeList}
+import kmels.uvg.kdecaf.compiler
+import compiler.parsing.ast.{Node,InnerType}
+import compiler.types.{aliases => typeAliases}
 import typeAliases._
 
 /**
@@ -14,43 +15,38 @@ import typeAliases._
  */
 trait SemanticRule{
   self: Node =>
-
+    
   import typeAliases.Scope
 
-  /*implicit def nodeToAttribute(x:Attribute):SymbolAttributes = SymbolAttribute(x)
-  implicit def nodeTupleToAttribute(x:(Attribute,Attribute)):SymbolAttributes = SymbolAttributes2(x)
-  implicit def nodeTupleWithListToAttribute[T](x:(Attribute,T))(implicit conv: T => Attribute) = SymbolAttributes2((conv(x._2),conv(x._2)))
-  implicit def symbolAttributesToAttribute(x:SymbolAttribute):Attribute = x.node*/
-  implicit def attributeListToAttribute(xs:List[Attribute]):Attribute = AttributeList(xs)
+  val typesShouldBeEqualIn: (InnerType,InnerType,String) => SemanticResult = (node1,node2,message) => 
+    if (node1.getUnderlyingType() == node2.getUnderlyingType()) 
+      SemanticSuccess 
+    else 
+      SemanticError(message)
 
-  implicit def attributesToScope(a:SemanticAttributes):Scope = a.scope match{
-    case Some(scope) => scope
-    case _ => throw new InternalError("scope expected.")
-  }
-  implicit def scopeToAttributes(s:String):SemanticAttributes = SemanticAttributes(Some(s))
-  
-  def SemanticAction(f: SemanticAttributes => Unit) = new SemanticAction{
-    def apply(attributes: SemanticAttributes) = f(attributes)
+  def SemanticAction(f: Scope => SemanticResult) = new SemanticAction{
+    def apply(attributes: Scope) = f(attributes)
   }
 
-  def SemanticError(message: String) = new SemanticError(message,this)
+  def SemanticError(message: String) = new SemanticError((message,this))
 
   val semanticAction:SemanticAction
 }
 
 trait NoSemanticAction extends SemanticRule{
   self: Node => 
-
   val semanticAction = SemanticAction(
-    attributes => {}
+    attributes => SemanticError("pendiente")
   )
 }
 trait SemanticResult
 
-case class SemanticAttributes(val scope:Option[String])
+object SemanticSuccess extends SemanticResult
 
-abstract class SemanticAction extends (SemanticAttributes => Unit) with SemanticResult
+case class SemanticResults(val results:SemanticResult*) extends SemanticResult
 
-case class SemanticError(val message:String,val node:Node) extends Exception with SemanticResult{
-  override def toString = message +" in line "+ node.pos.line+", column: "+node.pos.column
+abstract class SemanticAction extends (Scope => SemanticResult)
+
+case class SemanticError(val errors:SemanticErrorMessage*) extends SemanticResult{
+  //val messages = errors.map
 }
