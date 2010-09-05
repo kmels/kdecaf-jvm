@@ -296,11 +296,11 @@ case class ReturnStatement(val expression:Option[Expression]) extends Statement{
 	      case Some(exp) => 
 		typesShouldBeEqualIn(
 		  method.methodType,exp,
-		  "the type of "+expression+" must be "+method.methodType.getUnderlyingType()+"; found: "+exp.getUnderlyingType()
+		  "found: "+exp.getUnderlyingType()+"; required: "+method.methodType.getUnderlyingType()
 		)
 	      case _ => 
 		if (method.methodType.getUnderlyingType() != "void")
-		  SemanticError("the type of "+expression+" must be "+method.methodType.getUnderlyingType()+"; found: void")
+		  SemanticError("found: void; required: "+method.methodType.getUnderlyingType())
 		else
 		  SemanticSuccess
 	    }	    	    

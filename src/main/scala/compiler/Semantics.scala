@@ -28,7 +28,7 @@ trait SemanticRule{
     def apply(attributes: Scope) = f(attributes)
   }
 
-  def SemanticError(message: String) = new SemanticError((message,this))
+  def SemanticError(message: String) = new SemanticError((message,this.pos.line,this.pos.column))
 
   val semanticAction:SemanticAction
 }

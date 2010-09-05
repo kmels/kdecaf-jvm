@@ -19,21 +19,21 @@ object Main extends Application{
 
   val program:Program = result.get
 
-  program.semanticAction("global") match{
-    case SemanticResults(results @ _*) => {
-      val errorMessages:List[SemanticErrorMessage] = results.toList.flatMap({ 
-	case error:SemanticError => error.errors.toList
-	case _ => Nil
-      })
-
-      if (errorMessages.size > 0){	
-	println(errorMessages.map(errorMessage => "Type Error:"+errorMessage._2.pos.line+":"+errorMessage._1).mkString("\n"))
-      }	
-      else
-	println("well-typed")
+  def getErrorMessages(result:SemanticResult):List[SemanticErrorMessage] = result match{
+    case SemanticResults(results @ _*) => results.toList.flatMap{
+      case error:SemanticError => error.errors.toList
+      case semanticResults:SemanticResults => getErrorMessages(semanticResults)
+      case SemanticSuccess => Nil
     }
-    case _ => println("wtf.")
   }
+ 
+  val errorMessages:List[SemanticErrorMessage] = getErrorMessages(program.semanticAction("global"))
+    
+  if (errorMessages.size > 0){	
+    println(errorMessages.map(errorMessage => "Type Error:"+errorMessage._2+": "+errorMessage._1).mkString("\n"))
+  }	
+  else
+    println("well-typed")
  
   println("Symbol Table: "+kmels.uvg.kdecaf.compiler.SymbolTable.mkString(",\n"))
 }
