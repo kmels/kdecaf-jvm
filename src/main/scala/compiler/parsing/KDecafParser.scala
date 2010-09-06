@@ -41,13 +41,13 @@ class KDecafParser extends StandardTokenParsers with PackratParsers{
   
   lazy val varArrayDeclaration:PackratParser[VarDeclaration] = positioned(varType ~ ident ~ arraySizeDeclaration ^^ {
     case varType~id~arraySize => {
-      val array = varType.getUnderlyingType() match{
-	case "None" => KArray()
-	case "Int" => KArray[Int]()
-	case "Char" => KArray[Char]()
-	case "Boolean" => KArray[Boolean]()
+      val array:TypeConstructor[AnyVal] = varType.getUnderlyingType() match{
+	case "None" => KArray(arraySize)
+	case "Int" => KArray[Int](arraySize)
+	case "Char" => KArray[Char](arraySize)
+	case "Boolean" => KArray[Boolean](arraySize)
       }
-      VarDeclaration(array,id)  
+      VarDeclaration(array,id)
     }
   })
 

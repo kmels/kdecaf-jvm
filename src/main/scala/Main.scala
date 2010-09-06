@@ -7,7 +7,8 @@ import compiler.semantics._
 import compiler.types.aliases.SemanticErrorMessage
 
 object Main extends Application{
-  val input = io.Source.fromFile("/home/kmels/tmp/decaf-semantics").mkString
+  val path = System.getProperty("user.dir")+"/src/test/resources/semantics.decaf"
+  val input = io.Source.fromFile(path).mkString
 
   println("Input: \n"+input+"\n\n")
   import util.parsing.combinator.{lexical,syntactical}

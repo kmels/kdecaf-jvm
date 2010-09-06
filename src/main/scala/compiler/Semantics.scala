@@ -36,7 +36,7 @@ trait SemanticRule{
 trait NoSemanticAction extends SemanticRule{
   self: Node => 
   val semanticAction = SemanticAction(
-    attributes => SemanticError("pendiente")
+    attributes => SemanticSuccess
   )
 }
 trait SemanticResult

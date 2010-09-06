@@ -1,0 +1,51 @@
+class Program { 
+      struct tipo_de_util {
+      	     int id;
+	     boolean es_grande;
+      }
+
+      struct tipo_de_util lapiz;
+      struct tipo_de_util libro;
+      struct tipo_de_util libro_2;
+      
+      struct tipo_de_util_puntero{
+      	     struct tipo_de_util puntero;
+      } mis_utiles [5];
+
+      void copiar_struct_en_array(){
+      	   int n1;
+
+      	   int indice_lapiz;	   
+	   int indice_libro;
+	   
+	   //n = true;
+	   indice_lapiz = lapiz.id
+	   indice_libro = libro.id;
+      
+           return;	
+      }
+
+      void main(){
+      	   //inicializar lapiz y lapicero
+	   lapiz.id = 1		//well-typed
+	   //lapiz.cualquera = 50 	//ill-typed - cualquiera no existe en tipo_de_util
+	   lapiz.es_grande = false
+	   //lapiz.es_grande = 'e'	//ill-typed - es_grande es de tipo Boolean
+
+	   libro.id = 2
+	   libro.es_grande = true
+	   
+	   libro_2 = libro		//copia de libro
+
+	   copiar_struct_en_array();	   
+      }      
+
+      int obtener_id(char letra_nombre){
+      	  if (letra_nombre == 'l'){
+	     return 1;
+	  }	     
+	  else{
+	     return 2;
+	  }	     
+      }
+}

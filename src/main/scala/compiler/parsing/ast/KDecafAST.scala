@@ -16,14 +16,14 @@ import scala.util.parsing.input.{Positional,Position}
  * @version 2.0
  * @since 1.0
  */
-trait Node extends Positional{
+trait Node extends Positional with InnerType{
   override def toString = getClass.getName
   implicit def s(s:String):Node = new StringWrapper(s)
 
   val children: List[Node]   
 
   //string wrapper for listing nodes
-  class StringWrapper(val s:String) extends Node{
+  class StringWrapper(val s:String) extends Node with NoInnerType{
     val children = Nil
     override def toString = s
   }
@@ -45,11 +45,15 @@ trait InnerChar extends InnerType{
   val getUnderlyingType = () => "Char"
 }
 
+trait InnerTypeVoid extends InnerType{
+  val getUnderlyingType = () => "void"
+}
+
 trait NoInnerType extends InnerType{
   val getUnderlyingType = () => "Nothing"
 }
 
-case class Program(val name:String, val declarations:List[Declaration]) extends Node with SemanticRule{ 
+case class Program(val name:String, val declarations:List[Declaration]) extends Node with SemanticRule with NoInnerType{ 
   val children = declarations
 
   val semanticAction = SemanticAction(
@@ -86,14 +90,16 @@ abstract class Declaration extends Node with SemanticRule{
   )
 }
 
-case class VarDeclaration(val varType:VarType, val name:String) extends Declaration{
+case class VarDeclaration(val varType:VarType, val name:String) extends Declaration with InnerTypeVoid {
   val children:List[Node] = List(name,varType)
 
   val semanticAction = SemanticAction(
     varScope => {
-      val duplicatesSemanticResult = validateDuplicates(varScope)
+      val checkDuplicatesResult = validateDuplicates(varScope)
       SymbolTable.put((name,varScope),varType) //place this symbol in SymTable
-      duplicatesSemanticResult
+      SemanticResults(
+	checkDuplicatesResult,varType.semanticAction(varScope)
+      )
     }
   )
 }
@@ -105,15 +111,15 @@ case class StructDeclaration(val name:String, val value:Struct) extends Declarat
 
   //validate inner elements
   val semanticAction = SemanticAction(
-    attributes => {
-      validateDuplicates(attributes)
-      SymbolTable.put((name,attributes),value) //place this symbol in SymTable
-      value.semanticAction(name) //validate the struct, no duplicates inside
+    structScope => {
+      validateDuplicates(structScope)
+      SymbolTable.put((name,structScope),value) //place this symbol in SymTable
+      value.semanticAction(this.name) //validate the struct, no duplicates inside
     }
   )
 }
 
-case class MethodDeclaration(val methodType:VarType,val name:String,val parameters:List[Parameter],val codeBlock:Block) extends Declaration{
+case class MethodDeclaration(val methodType:VarType,val name:String,val parameters:List[Parameter],val codeBlock:Block) extends Declaration with NoInnerType{
   val children:List[Node] = List[Node](methodType,name)++parameters:+codeBlock  
 
   val semanticAction = SemanticAction(
@@ -163,11 +169,19 @@ case class struct(val name:String) extends VarType { //the name of the struct
   val getUnderlyingType = () => "struct_"+name
 }
 
-trait TypeConstructor[T] extends VarType
+trait TypeConstructor[+T] extends VarType
 
-case class KArray[U <: AnyVal](implicit m:Manifest[U]) extends TypeConstructor[U] with NoSemanticAction{
+case class KArray[U <: AnyVal](val size:Int)(implicit m:Manifest[U]) extends TypeConstructor[U] with SemanticRule{
   override def toString = "KArray["+m.toString+"]"
 
+  val semanticAction = SemanticAction(
+    scope => {
+      if (!(size > 0))
+	SemanticError("Array size should be greater than 0, found: "+size)
+      else
+	SemanticSuccess
+    }
+  )
   val getUnderlyingType = () => m.toString
 }
 
@@ -186,17 +200,17 @@ case class Struct(val value:List[VarDeclaration]) extends TypeConstructor[List[V
   val getUnderlyingType = () => value.mkString(",")
 }
 
-abstract class Parameter extends Node{
+abstract class Parameter extends Node with NoInnerType{
   val varType:PrimitiveType[_]
   val name:String
   override val children:List[Node] = List(varType,name)
 }
 
-case class PrimitiveTypeParameter(val varType:PrimitiveType[AnyVal], val name:String) extends Parameter
+case class PrimitiveTypeParameter(val varType:PrimitiveType[AnyVal], val name:String) extends Parameter 
 
 case class PrimitiveArrayParameter(val varType:PrimitiveType[AnyVal], val name:String) extends Parameter
 
-case class Block(val varDeclarations:List[VarDeclaration], val statements:List[Statement]) extends Statement with SemanticRule{
+case class Block(val varDeclarations:List[VarDeclaration], val statements:List[Statement]) extends Statement with SemanticRule with InnerTypeVoid{
   override val children:List[Node] = varDeclarations++statements
 
   val semanticAction = SemanticAction(
@@ -235,14 +249,14 @@ trait ConditionStatement extends Statement{
   )
 }
 
-case class IfStatement(val expression:Expression,val codeBlock:Block, val elseBlock:Option[Block] = None) extends ConditionStatement{
+case class IfStatement(val expression:Expression,val codeBlock:Block, val elseBlock:Option[Block] = None) extends ConditionStatement with InnerTypeVoid{
   val children:List[Node] = elseBlock match{
     case Some(elseBlock) => List(expression,codeBlock,elseBlock)
     case _ => List(expression,codeBlock)
   }  
 }
 
-case class WhileStatement(val expression:Expression,val codeBlock:Block) extends ConditionStatement{
+case class WhileStatement(val expression:Expression,val codeBlock:Block) extends ConditionStatement with InnerTypeVoid{
   val children:List[Node] = List(expression,codeBlock)
 }
 
@@ -254,7 +268,7 @@ case class MethodCall(val name:String,val arguments:List[Expression]) extends Ex
   val semanticAction = SemanticAction(
     attributes => {
       //the method name must exist and it must be of type MethodDeclaration, and the number of the arguments must be the same and of the same type
-      SymbolTable.get((this.name,"global")) match { //this is HARDCODED! attributes.scope should be List[Scope]
+      SymbolTable.get((this.name,"Program")) match { //this is HARDCODED! attributes.scope should be List[Scope]
 	case Some(attributes) => attributes match{
 	  case method:MethodDeclaration => {
 	    if (arguments.size!=method.parameters.size)
@@ -280,7 +294,7 @@ case class MethodCall(val name:String,val arguments:List[Expression]) extends Ex
   )
 }
 
-case class ReturnStatement(val expression:Option[Expression]) extends Statement{
+case class ReturnStatement(val expression:Option[Expression]) extends Statement with InnerTypeVoid{
   val children:List[Node] = expression match{
     case Some(exp) => List(exp)
     case _ => Nil
@@ -313,7 +327,7 @@ case class ReturnStatement(val expression:Option[Expression]) extends Statement{
   )
 }
 
-case class Assignment(val location:Location,val expression:Expression) extends Statement{
+case class Assignment(val location:Location,val expression:Expression) extends Statement with InnerTypeVoid{
   val children:List[Node] = List(location,expression)
 
   val semanticAction = SemanticAction(
@@ -328,47 +342,78 @@ case class Assignment(val location:Location,val expression:Expression) extends S
 
 abstract class Location extends Expression with InnerType{
   val name:String
-  val optionalMember:Option[Location]
-
-  val getUnderlyingType: () => String = () => optionalMember match{
-    case Some(member) => member.getUnderlyingType()
-    case _ => SymbolTable.getSymbolName(this.name) match{
-      case Some(node) => node match{
-	case symbolWithInnerType:InnerType => symbolWithInnerType.getUnderlyingType()
-	case _ => "Nothing"
-      }
-      case _ => "Nothing" //can't find symbol in symbol table!
-    }
-  }
+  val optionalMember:Option[Location]  
 }
 
-case class SimpleLocation(val name:String, val optionalMember:Option[Location] = None) extends Location {
+case class SimpleLocation(val name:String, val optionalMember:Option[Location] = None) extends Location with SemanticRule{
   val children:List[Node] = optionalMember match{
     case Some(member) => List(name,member)
     case _ => List(s(name))
   }  
+  
+  //in case the optional member is trying to get fetched and it doesn't exist 
+  object SemanticErrorType extends Enumeration{
+    type SemanticErrorType = Value
+    val NotAStruct,LocationNotFound,MemberDoesNotExist = Value
+  }
+  import SemanticErrorType._
+
+  /**
+   * returns (None,_) if member does not exist or this location is not an struct 
+   */
+  private def getInnerMemberType:(Option[String],Option[SemanticErrorType]) = {
+    val structName:(Option[String],Option[SemanticErrorType]) = SymbolTable.getSymbolName(this.name) match{
+      case Some(node) => node match{
+	case struct:struct => (Some(struct.name),None)
+	  case _ => (None,Some(SemanticErrorType.NotAStruct)) //this is not a struct
+      }
+      case _ => (None,Some(SemanticErrorType.LocationNotFound))  //this variable does not exist
+    }
+    
+    structName._1 match{
+      case Some(structName) => SymbolTable.get(optionalMember.get.name,structName) match{
+	case Some(node) => (Some(node.getUnderlyingType()),None)
+	  case _ => (None,Some(SemanticErrorType.MemberDoesNotExist))
+      }
+      case _ => structName
+    }
+
+    
+  }
+
+  val getUnderlyingType: () => String = () => optionalMember match{
+    case Some(member) => getInnerMemberType._1 match{ case None => "Nothing" ; case underlyingMemberType => underlyingMemberType.get}
+    case _ => SymbolTable.getSymbolName(this.name) match{
+      case Some(node) => node.getUnderlyingType()
+      case _ => "Nothing"
+    }
+  }
 
   //semantic action must be, assert on the existence of Some(optionalMember
   val semanticAction = SemanticAction(
-    attributes => {
-      SemanticError(this+" pendiente")
-    }
+    currentScope => {      
+      getUnderlyingType() match{
+	case "Nothing" => optionalMember match{
+	  case Some(member) => getInnerMemberType._2.get match{
+	    case NotAStruct => SemanticError(this.name+" is not a struct")
+	    case LocationNotFound => SemanticError(this.name+" can not be found")
+	    case MemberDoesNotExist => SemanticError(member.name+" is not a member of "+this.name)
+	  }
+	  case _ => SemanticSuccess
+	}
+	case _ => SemanticSuccess
+      } //end underlying type match
+    } //end semantic action
   )
 }
 
-case class ArrayLocation(val name:String, val index:Expression, val optionalMember:Option[Location] = None) extends Location{
+case class ArrayLocation(val name:String, val index:Expression, val optionalMember:Option[Location] = None) extends Location with SemanticActionPendiente{
   val children:List[Node] = optionalMember match{
     case Some(member) => List(name,index,member)
     case _ => List(name)
   }
 
-//val getUnderlyingType = "pendiente"
-
-  val semanticAction = SemanticAction(
-    attributes => {
-      SemanticError(this+"pendiente")
-    }
-  )
+  val getUnderlyingType: () => String = () => "PENDIENTE--arraylocation"
 }
 
 abstract class Expression extends Statement with InnerType with SemanticRule
@@ -456,7 +501,7 @@ trait SemanticActionPendiente extends SemanticRule{
 
   val semanticAction = SemanticAction(
     attributes => {
-      SemanticError(this+"pendiente")
+      SemanticError(this+" está pendiente")
     }
   )
 }
