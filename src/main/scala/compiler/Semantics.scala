@@ -1,6 +1,5 @@
 package kmels.uvg.kdecaf.compiler.semantics
 
-//import kmels.uvg.kdecaf.compiler.{SymbolAttribute,SymbolAttributes,SymbolAttributes2}
 import kmels.uvg.kdecaf.compiler
 import compiler.parsing.ast.{Node,InnerType}
 import compiler.types.{aliases => typeAliases}
@@ -48,6 +47,4 @@ case class SemanticResults(val results:SemanticResult*) extends SemanticResult
 
 abstract class SemanticAction extends (Scope => SemanticResult)
 
-case class SemanticError(val errors:SemanticErrorMessage*) extends SemanticResult{
-  //val messages = errors.map
-}
+case class SemanticError(val errors:SemanticErrorMessage*) extends SemanticResult

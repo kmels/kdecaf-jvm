@@ -1,0 +1,163 @@
+\documentclass[12pt,letterpaper]{article}
+\usepackage{listings}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{ifpdf}
+\usepackage{verbatim}
+
+\author{Carlos L\'{o}pez}
+\title{Semántica de KDecaf}
+
+% "define" KDecaf
+\begin{comment}
+\lstdefinelanguage{Decaf}{
+  morekeywords={class,struct,true,false,void,%
+    if,else,while,return,int,char,boolean},
+  otherkeywords={{,},;,+,-,/,*,<=,>,<,<=,>=,!=,==,\%,@},
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[n]{/*}{*/},
+  morestring=[b]",
+  morestring=[b]',
+  morestring=[b]"""
+}
+\end{comment}
+
+\lstdefinelanguage{Scala}{
+  morekeywords={abstract,case,catch,class,def,do,else,extends,
+  false,final,finally,for,if,implicit,import,match,mixin,
+  new,null,object,override,package,
+  private,protected,requires,return,sealed,
+  super,this,throw,trait,true,try,type,val,var,while,with,yield},
+  otherkeywords={{,},;,+,-,~>,<~,~,|,/,*,<=,>,<,<=,>=,!=,==,\%,@},
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[n]{/*}{*/},
+  morestring=[b]",
+  morestring=[b]',
+  morestring=[b]"""
+}
+
+\usepackage{color}
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+ 
+% Default settings for code listings
+\lstset{frame=tb,
+  language=Scala,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  frame=none,
+  breaklines=true,
+  breakatwhitespace=true
+  tabsize=3
+}
+
+\lstset{frame=tb,
+  language=Scala,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  frame=none,
+  breaklines=true,
+  breakatwhitespace=true
+  tabsize=3
+}
+
+
+\begin{document}
+\maketitle
+
+\section{Antecedentes}
+
+El $stream$ de caracteres de entrada es mapeado por el parser \textbf{KDecafParser} a instancias de nodos del AST; este se encarga de construír nodos como \textbf{Program} o un nodo \textbf{Declaration} que puede ser ya sea \textbf{VarDeclaration}, \textbf{StructDeclaration} o \textbf{MethodDeclaration}, n\'{o}tese que \textbf{Declaration} es un nodo abstracto, es decir, el parser no podría construír un \textbf{Declaration} sin que este fuera una instancia de sus tipos espec\'{i}ficos.
+
+\section{Estructuras}
+
+Existe un trait (similar a una interfaz en Java), que extiende de \textbf{$Scope => SemanticResult$} en Scala, eso significa que es una funci\'{o}n que toma un argumento de tipo \textbf{Scope} y devuelve un valor de tipo \textbf{SemanticResult}.
+
+Estos traits y clases se ecuentran definido en un archivo Semantics.scala:
+
+\lstinputlisting{/home/kmels/code/uvg/cc3007/src/main/scala/compiler/Semantics.scala}
+
+Nótese que un resultado semántico puede ser cualquier instancia de los siguientes casos:
+
+\begin{itemize}
+  \item Una lista de resultados semánticos: \textbf{SemanticResults}
+  \item Un resultado semántico que tiene sentido: \textbf{SemanticSuccess}
+  \item Un error semántico: \textbf{SemanticError}
+\end{itemize}
+
+Cada nodo implementa a \textbf{SemanticRule} por lo que se podr\'{i}a decir que cada nodo tambi\'{e}n es una regla sem\'{a}ntica. Los resultados de las aplicaciones de las reglas semánticas son evaluados cuando se necesita, por ejemplo \textbf{Program} necesita de los resultados semánticos de cada una de sus declaraciones. De esta manera, los resultados semánticos se pueden propagar.
+
+Todos los nodos tienen un tipo interno, esto lo restringe el trait InnerType, que forza a cada nodo a tener una funci\'{o}n que no recibe argumentos y devuelve el tipo del nodo.
+
+\begin{lstlisting}
+trait Node extends Positional with InnerType{
+  override def toString = getClass.getName
+}
+
+trait InnerType {
+  val getUnderlyingType: () => String
+}
+\end{lstlisting}
+
+Algunos nodos no necesitan calcular su valor siempre que les sea requerido, esto se puede abstraer construyendo otros traits que extendien a \textbf{InnerType} y aplicandolos en nodos de la siguiente forma:
+
+\begin{lstlisting}
+trait InnerInt extends InnerType{
+  val getUnderlyingType = () => "Int"
+}
+
+case class ExpressionAdd(val exp1:Expression,val exp2:Expression)(implicit val m:Manifest[Int]) extends BinaryOperation[Int] with InnerInt
+
+case class ExpressionSub(val exp1:Expression,val exp2:Expression)(implicit val m:Manifest[Int]) extends BinaryOperation[Int] with InnerInt
+case class ExpressionMult(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Int]) extends BinaryOperation[Int] with InnerInt
+\end{lstlisting}
+
+\section*{Ejemplo de Regla Sem\'{a}ntica}
+
+Un nodo \textbf{Assignment} que representa a la producci\'{o}n \textbf{$Location$ '=' $Expression$} verifica lo siguiente:
+\begin{itemize}
+  \item El tipo de Location es el mismo que el de expression.
+  \item Location exista como variable declarada.
+\end{itemize}
+
+\begin{lstlisting}
+case class Assignment(val location:Location,val expression:Expression) extends Statement with InnerTypeVoid{
+
+  val semanticAction = SemanticAction(
+    attributes => {
+      val typeEqualityResult = typesShouldBeEqualIn(
+	location,expression,
+	"cannot assign expression of type "+expression.getUnderlyingType()+" to "+location.name+" of declared type "+location.getUnderlyingType()
+      )
+
+      SemanticResults(typeEqualityResult,location.semanticAction(attributes),expression.semanticAction(attributes))
+    }
+  )
+}
+\end{lstlisting}
+
+Para m\'{a}s informaci\'{o}n sobre las reglas sem\'{a}nticas y nodos existentes, visitar \cite{kmels-rep-cc3007}:
+
+\begin{thebibliography}{1}
+%referencias anteriores
+\bibitem{kmels-rep-cc3007} Repositorio Construcci\'{o}n de Compiladores, kmels.net, \url{http://uvg.kmels.net/code/cc3007}.
+\end{thebibliography}
+\end{document}
