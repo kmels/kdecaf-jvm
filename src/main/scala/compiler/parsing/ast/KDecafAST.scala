@@ -119,7 +119,7 @@ case class StructDeclaration(val name:String, val value:Struct) extends Declarat
   )
 }
 
-case class MethodDeclaration(val methodType:VarType,val name:String,val parameters:List[Parameter],val codeBlock:Block) extends Declaration with NoInnerType{
+case class MethodDeclaration(val methodType:VarType,val name:String,val parameters:List[Parameter],val codeBlock:Block) extends Declaration with NoInnerType{ 
   val children:List[Node] = List[Node](methodType,name)++parameters:+codeBlock  
 
   val semanticAction = SemanticAction(
@@ -263,19 +263,27 @@ case class WhileStatement(val expression:Expression,val codeBlock:Block) extends
 case class MethodCall(val name:String,val arguments:List[Expression]) extends Expression{
   val children:List[Node] = List[Node](name)++arguments
 
-  val getUnderlyingType = () => "void"
+  val getUnderlyingType = () => SymbolTable.get(this.name,"Program") match{
+    case Some(node) => node match{
+      case methodDcl:MethodDeclaration => methodDcl.methodType.getUnderlyingType()
+      case _ => "Nothing"
+    }
+    case _ => "Nothing"
+  }
 
-  val semanticAction = SemanticAction(
+  override val semanticAction = SemanticAction(
     attributes => {
       //the method name must exist and it must be of type MethodDeclaration, and the number of the arguments must be the same and of the same type
       SymbolTable.get((this.name,"Program")) match { //this is HARDCODED! attributes.scope should be List[Scope]
 	case Some(attributes) => attributes match{
 	  case method:MethodDeclaration => {
-	    if (arguments.size!=method.parameters.size)
-	      SemanticError("the number of arguments do not match the number of the method parameters")
-	    
-	    SemanticResults(
-	      arguments.zip(method.parameters).map(
+	    val argsSizeResult = 
+	      if (arguments.size!=method.parameters.size)
+		SemanticError("the number of arguments do not match the number of the method parameters")
+	      else
+		SemanticSuccess
+
+	    val argumentResults:List[SemanticResult] = arguments.zip(method.parameters).map(
 		argumentAndParameter => {
 		  val argument:Expression = argumentAndParameter._1
 		  val parameter:Parameter = argumentAndParameter._2
@@ -283,7 +291,10 @@ case class MethodCall(val name:String,val arguments:List[Expression]) extends Ex
 		    argument,parameter.varType,
 		    "Type Error: argument "+argument+" has type "+argument.getUnderlyingType()+", expected: "+parameter.varType.getUnderlyingType()
 		  )
-		}) : _*
+		})
+
+	    SemanticResults(
+	      (argsSizeResult :: argumentResults) : _*
 	    )
 	  }
 	  case _ => SemanticError(name+" is not a method")
@@ -332,10 +343,12 @@ case class Assignment(val location:Location,val expression:Expression) extends S
 
   val semanticAction = SemanticAction(
     attributes => {
-      typesShouldBeEqualIn(
+      val typeEqualityResult = typesShouldBeEqualIn(
 	location,expression,
-	"cannot assign expression of type "+expression.getUnderlyingType()+" to "+location.name+" of declared type "+location.getUnderlyingType()
+	"cannot assign expression of type "+expression.getUnderlyingType()+"("+expression+")"+" to "+location.name+" of declared type "+location.getUnderlyingType()
       )
+
+      SemanticResults(typeEqualityResult,location.semanticAction(attributes),expression.semanticAction(attributes))
     }
   )
 }
@@ -490,11 +503,11 @@ abstract class Literal[+T](implicit m:Manifest[T]) extends Expression{
   override def toString = "Literal["+m+"]"
 }
 
-case class IntLiteral(val literal:Int)(implicit val m:Manifest[Int]) extends Literal[Int] with InnerInt with SemanticActionPendiente
+case class IntLiteral(val literal:Int)(implicit val m:Manifest[Int]) extends Literal[Int] with InnerInt with NoSemanticAction
 
-case class CharLiteral(val literal:Char)(implicit val m:Manifest[Char]) extends Literal[Char] with InnerChar with SemanticActionPendiente
+case class CharLiteral(val literal:Char)(implicit val m:Manifest[Char]) extends Literal[Char] with InnerChar with NoSemanticAction
 
-case class BoolLiteral(val literal:Boolean)(implicit val m:Manifest[Boolean]) extends Literal[Boolean] with InnerBool with SemanticActionPendiente
+case class BoolLiteral(val literal:Boolean)(implicit val m:Manifest[Boolean]) extends Literal[Boolean] with InnerBool with NoSemanticAction
 
 trait SemanticActionPendiente extends SemanticRule{
   self: Node =>

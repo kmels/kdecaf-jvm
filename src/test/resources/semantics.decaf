@@ -12,16 +12,26 @@ class Program {
       	     struct tipo_de_util puntero;
       } mis_utiles [5];
 
-      void copiar_struct_en_array(){
-      	   int n1;
+      int obtener_id(boolean es_grande){
+      	  if (es_grande){
+	     return 2;
+	  }	     
+	  else{
+	     return 1;
+	  }	     
+      }
 
+      void copiar_struct_en_array(){
       	   int indice_lapiz;	   
 	   int indice_libro;
 	   
-	   //n = true;
 	   indice_lapiz = lapiz.id
-	   indice_libro = libro.id;
-      
+	   indice_libro = obtener_id(true);
+	   //indice_libro = obtener_id();	//expected one argument
+	   //indice_libro = obtener_id(false,false);	//expected one argument
+	   //indice_libro = obtener_id(5);	//expected boolean
+	   indice_libro = obtener_id(false)	   
+      	   
            return;	
       }
 
@@ -39,13 +49,4 @@ class Program {
 
 	   copiar_struct_en_array();	   
       }      
-
-      int obtener_id(char letra_nombre){
-      	  if (letra_nombre == 'l'){
-	     return 1;
-	  }	     
-	  else{
-	     return 2;
-	  }	     
-      }
 }
