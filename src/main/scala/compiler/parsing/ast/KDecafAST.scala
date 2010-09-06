@@ -321,11 +321,11 @@ case class ReturnStatement(val expression:Option[Expression]) extends Statement 
 	      case Some(exp) => 
 		typesShouldBeEqualIn(
 		  method.methodType,exp,
-		  "found: "+exp.getUnderlyingType()+"; required: "+method.methodType.getUnderlyingType()
+		  "found: "+exp.getUnderlyingType()+"; expected: "+method.methodType.getUnderlyingType()
 		)
 	      case _ => 
 		if (method.methodType.getUnderlyingType() != "void")
-		  SemanticError("found: void; required: "+method.methodType.getUnderlyingType())
+		  SemanticError("found: void; expected: "+method.methodType.getUnderlyingType())
 		else
 		  SemanticSuccess
 	    }	    	    
@@ -345,7 +345,7 @@ case class Assignment(val location:Location,val expression:Expression) extends S
     attributes => {
       val typeEqualityResult = typesShouldBeEqualIn(
 	location,expression,
-	"cannot assign expression of type "+expression.getUnderlyingType()+"("+expression+")"+" to "+location.name+" of declared type "+location.getUnderlyingType()
+	"cannot assign expression of type "+expression.getUnderlyingType()+" to "+location.name+" of declared type "+location.getUnderlyingType()
       )
 
       SemanticResults(typeEqualityResult,location.semanticAction(attributes),expression.semanticAction(attributes))
@@ -389,9 +389,7 @@ case class SimpleLocation(val name:String, val optionalMember:Option[Location] =
 	  case _ => (None,Some(SemanticErrorType.MemberDoesNotExist))
       }
       case _ => structName
-    }
-
-    
+    } 
   }
 
   val getUnderlyingType: () => String = () => optionalMember match{
@@ -420,13 +418,82 @@ case class SimpleLocation(val name:String, val optionalMember:Option[Location] =
   )
 }
 
-case class ArrayLocation(val name:String, val index:Expression, val optionalMember:Option[Location] = None) extends Location with SemanticActionPendiente{
+case class ArrayLocation(val name:String, val index:Expression, val optionalMember:Option[Location] = None) extends Location{
   val children:List[Node] = optionalMember match{
     case Some(member) => List(name,index,member)
     case _ => List(name)
   }
 
-  val getUnderlyingType: () => String = () => "PENDIENTE--arraylocation"
+  //in case the optional member is trying to get fetched and it doesn't exist 
+  object SemanticErrorType extends Enumeration{
+    type SemanticErrorType = Value
+    val LocationIsNotArray,LocationNotFound,NotAStruct = Value
+  }
+  import SemanticErrorType._
+
+  private def arrayDeclaration:(Option[KArray[_]],Option[SemanticErrorType]) = SymbolTable.getSymbolName(this.name) match{
+    case Some(node) => node match{
+      case array:KArray[_] => (Some(array),None)
+      case _ => (None,Some(SemanticErrorType.LocationIsNotArray))
+    }
+    case _ => (None,Some(SemanticErrorType.LocationNotFound)) //this variable does not exist
+  }
+  
+  private def getInnerMemberType:(Option[String],Option[SemanticErrorType]) = optionalMember match{
+    case Some(innerMember) => arrayDeclaration._1 match{
+      case Some(arrayDeclaration) => arrayDeclaration.getUnderlyingType() match{
+	case "Struct" => (Some(arrayDeclaration.getUnderlyingType()),None)
+	case _ => (Some("eeeeeeee..."),Some(NotAStruct))
+      }
+      case _ => (None,arrayDeclaration._2)
+    }
+    case _ => (None,None) //this shouldn't happen as we'll never try to get inner member type if it's None
+  }
+  
+  val getUnderlyingType: () => String = () => optionalMember match{
+    case Some(member) => getInnerMemberType._1 match{
+      case Some(innerType) => innerType
+      case _ => "Nothing"
+    }
+    case _ => arrayDeclaration._1 match{
+      case Some(varDeclaration) => varDeclaration.getUnderlyingType()
+      case _ => "Nothing"
+    }
+  }
+  
+  val semanticAction = SemanticAction(
+    attributes => {
+      val isArrayResult = arrayDeclaration._1 match{
+	case Some(varDecl) => SemanticSuccess
+	case _ => arrayDeclaration._2.get match{
+	  case SemanticErrorType.LocationIsNotArray => SemanticError(this.name+" is not an array")
+	  case SemanticErrorType.LocationNotFound => SemanticError(this.name+" could not be found")
+	}
+      }
+
+      val indexIsInteger = index.getUnderlyingType() match{
+	case "Int" => SemanticSuccess
+	case _ => SemanticError("found: "+index.getUnderlyingType()+"; expected: Int")
+      }
+
+      val optionalMemberResult:SemanticResult = optionalMember match{
+	case Some(member) => getInnerMemberType._1 match{
+	  case Some(structName) => {
+	    //pendiente
+	    SemanticSuccess
+	  }
+	  case _ => getInnerMemberType._2.get match{
+	    case SemanticErrorType.LocationIsNotArray => SemanticSuccess //is is already covered by isArrayResult
+	    case SemanticErrorType.LocationNotFound => SemanticSuccess   //is is already covered by isArrayResult
+	    case SemanticErrorType.NotAStruct => SemanticError(this.name+" is not a struct")
+	  }
+	}
+	case _ => SemanticSuccess
+      }
+
+      SemanticResults(isArrayResult,indexIsInteger,optionalMemberResult)
+    }
+  )
 }
 
 abstract class Expression extends Statement with InnerType with SemanticRule
@@ -509,7 +576,7 @@ case class CharLiteral(val literal:Char)(implicit val m:Manifest[Char]) extends 
 
 case class BoolLiteral(val literal:Boolean)(implicit val m:Manifest[Boolean]) extends Literal[Boolean] with InnerBool with NoSemanticAction
 
-trait SemanticActionPendiente extends SemanticRule{
+/*trait SemanticActionPendiente extends SemanticRule{
   self: Node =>
 
   val semanticAction = SemanticAction(
@@ -517,4 +584,4 @@ trait SemanticActionPendiente extends SemanticRule{
       SemanticError(this+" está pendiente")
     }
   )
-}
+}*/

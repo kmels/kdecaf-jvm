@@ -39,6 +39,7 @@ trait NoSemanticAction extends SemanticRule{
     attributes => SemanticSuccess
   )
 }
+
 trait SemanticResult
 
 object SemanticSuccess extends SemanticResult

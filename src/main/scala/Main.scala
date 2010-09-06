@@ -17,9 +17,9 @@ object Main extends Application{
 
   import compiler.parsing.ast._
   import compiler.semantics._
-
+  
   val program:Program = result.get
-
+  
   def getErrorMessages(result:SemanticResult):List[SemanticErrorMessage] = result match{
     case SemanticResults(results @ _*) => results.toList.flatMap{
       case error:SemanticError => error.errors.toList
