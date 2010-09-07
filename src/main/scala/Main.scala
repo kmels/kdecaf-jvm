@@ -23,12 +23,14 @@ object Main extends Application{
   def getErrorMessages(result:SemanticResult):List[SemanticErrorMessage] = result match{
     case SemanticResults(results @ _*) => results.toList.flatMap{
       case error:SemanticError => error.errors.toList
-      case semanticResults:SemanticResults => getErrorMessages(semanticResults)
+      case semanticResults:SemanticResults => 2getErrorMessages(semanticResults)
       case SemanticSuccess => Nil
     }
   }
  
-  val errorMessages:List[SemanticErrorMessage] = getErrorMessages(program.semanticAction("global"))
+//  println("Program semantic results: "+program.semanticAction("Program"))
+
+  val errorMessages:List[SemanticErrorMessage] = getErrorMessages(program.semanticAction("Program"))
     
   if (errorMessages.size > 0){	
     println(errorMessages.map(errorMessage => "Type Error:"+errorMessage._2+": "+errorMessage._1).mkString("\n"))

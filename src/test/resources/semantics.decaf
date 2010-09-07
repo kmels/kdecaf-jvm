@@ -1,66 +1,20 @@
-class Program { 
-      struct tipo_de_util {
-      	     int id;
-	     boolean es_grande;
-      }
-
-      struct tipo_de_util lapiz;
-      struct tipo_de_util libro;
-      struct tipo_de_util libro_2;
-      
-      boolean array_de_tamanos [2];
-      int array_de_ids [2];
-    
-      int obtener_id(boolean es_grande){
+class Program {     
+      void obtener_id(boolean es_grande){
       	  if (es_grande){
-	     return 2;
-	  }	     
+	     return;
+	  }
 	  else{
 	     return 1;
 	  }	     
       }
 
       boolean copiar_utiles_en_array(){
-      	   int indice_lapiz;	   
-	   int indice_libro;
-	   
-	   indice_lapiz = lapiz.id
-	   indice_libro = obtener_id(true);
-	   //indice_libro = obtener_id();	//expected one argument
-	   //indice_libro = obtener_id(false,false);	//expected one argument
-	   //indice_libro = obtener_id(5);	//expected boolean
-	   indice_libro = obtener_id(false);
-	   
-	   array_de_ids[0] = indice_lapiz;
-	   array_de_ids[1] = indice_libro;
+	   boolean indice_lapiz;
+      	   //int indice_lapiz;   	   
 
-	   //array_no_existente[0] = indice_lapiz; //array no existe
-	   //array_de_ids[0] = true; //type-error
-	   //array_de_ids[true] = 0; //index necesita ser de tipo Int
-
-	   array_de_tamanos[0] = false;
-	   array_de_tamanos[1] = true;
-
-	   //array_de_tamanos[0] = 1;	    //error de tipo
-	   //array_de_tamanos[true] = true; //error de indice	   	   
-
-           return true;
-	   //return;     //error de tipo
-	   //return 1; //error de tipo
+	   return true;
       }
 
       void main(){
-      	   //inicializar lapiz y lapicero
-	   lapiz.id = 1		//well-typed
-	   //lapiz.cualquera = 50 	//ill-typed - cualquiera no existe en tipo_de_util
-	   lapiz.es_grande = false
-	   //lapiz.es_grande = 'e'	//ill-typed - es_grande es de tipo Boolean
-
-	   libro.id = 2
-	   libro.es_grande = true
-	   
-	   libro_2 = libro		//copia de libro
-
-	   copiar_utiles_en_array();	   
       }      
 }

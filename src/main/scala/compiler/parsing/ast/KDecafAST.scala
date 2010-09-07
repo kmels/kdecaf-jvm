@@ -82,8 +82,10 @@ abstract class Declaration extends Node with SemanticRule{
   val validateDuplicates: SemanticAction  = SemanticAction(
     declarationScope => {
       //val scope = attributesToScope(attributes)
-      if (SymbolTable.contains((name,declarationScope)))
+      if (SymbolTable.contains((name,declarationScope))){
 	SemanticError(name+"\" already declared in scope \""+declarationScope+"\"")
+      }
+	
       else
 	SemanticSuccess
     }
@@ -97,9 +99,12 @@ case class VarDeclaration(val varType:VarType, val name:String) extends Declarat
     varScope => {
       val checkDuplicatesResult = validateDuplicates(varScope)
       SymbolTable.put((name,varScope),varType) //place this symbol in SymTable
+
       SemanticResults(
 	checkDuplicatesResult,varType.semanticAction(varScope)
       )
+
+      checkDuplicatesResult
     }
   )
 }
@@ -215,12 +220,16 @@ case class Block(val varDeclarations:List[VarDeclaration], val statements:List[S
 
   val semanticAction = SemanticAction(
     blockScope => {
-      varDeclarations.foreach( _.semanticAction(blockScope))
-      SemanticResults(
-	statements.map(_ match{
+      val varDeclarationsSemanticResults = varDeclarations.map(_.semanticAction(blockScope))
+      //varDeclarations.foreach( _.semanticAction(blockScope))
+
+      val statementResults = statements.map(_ match{
 	  case illegalLocation:Location => SemanticError("Illegal location statement: "+illegalLocation)
 	  case legalStatement => legalStatement.semanticAction(blockScope)
-	}) : _*
+	}) 
+
+      SemanticResults(
+	(varDeclarationsSemanticResults ++ statementResults) : _*
       )
     }
   )
@@ -235,7 +244,7 @@ trait ConditionStatement extends Statement{
   val codeBlock:Block
   
   //assert on the type of the expression, it has to be boolean
-  val semanticAction = SemanticAction(
+  val assertOnBooleanExprAndDoBlock = SemanticAction(
     scope => {
       //expression has to be reducible to true or false
       expression.getUnderlyingType() match{
@@ -253,11 +262,24 @@ case class IfStatement(val expression:Expression,val codeBlock:Block, val elseBl
   val children:List[Node] = elseBlock match{
     case Some(elseBlock) => List(expression,codeBlock,elseBlock)
     case _ => List(expression,codeBlock)
-  }  
+  } 
+
+  val semanticAction = SemanticAction(
+    scope => {
+      val assert1Result = assertOnBooleanExprAndDoBlock(scope)
+      val elseResult = elseBlock match{
+	case Some(elseBlock) => elseBlock.semanticAction(scope)
+	case _ => SemanticSuccess
+      }
+      SemanticResults(assert1Result,elseResult)
+    }        
+  )
 }
 
 case class WhileStatement(val expression:Expression,val codeBlock:Block) extends ConditionStatement with InnerTypeVoid{
   val children:List[Node] = List(expression,codeBlock)
+
+  val semanticAction = assertOnBooleanExprAndDoBlock
 }
 
 case class MethodCall(val name:String,val arguments:List[Expression]) extends Expression{
