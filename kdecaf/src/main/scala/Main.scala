@@ -23,7 +23,7 @@ object Main extends Application{
   def getErrorMessages(result:SemanticResult):List[SemanticErrorMessage] = result match{
     case SemanticResults(results @ _*) => results.toList.flatMap{
       case error:SemanticError => error.errors.toList
-      case semanticResults:SemanticResults => 2getErrorMessages(semanticResults)
+      case semanticResults:SemanticResults => getErrorMessages(semanticResults)
       case SemanticSuccess => Nil
     }
   }
