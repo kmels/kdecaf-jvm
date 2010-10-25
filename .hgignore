@@ -21,3 +21,8 @@ Reference.log
 Reference.out
 syntax: regexp
 (.*)\.log
+(.*)\.dvi
+(.*)\.pdf
+(.*)\.aux
+
+

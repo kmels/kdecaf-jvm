@@ -1,0 +1,74 @@
+class Program {
+      int uno;
+      int fibonacciN;
+      char c;
+      int fibonacciResult;      
+      
+      int sumar(int a,int b){
+      	  return a + b;
+      }
+
+      int getParam(int p){
+      	  return p;
+      }
+
+      int getFibonacci(){
+	return fibonacciN;
+      }
+
+      int getVeinte(){
+      	  int n;
+	  int p;
+
+	  n = uno; //1
+	  p = 0; // 2
+	  n = n - 19;
+	  n = n * p;
+	  return n;
+      }
+
+      boolean esMayorQueCero(int numero){
+	      return numero > 0;
+      }
+
+      boolean esMayorQueCeroConIf(int numero){
+      	      boolean r;	      
+      	      if (numero > 0){
+	      	  return true;
+	      }	      	
+	      else{
+		return false;
+	      }
+      }
+
+      void main(){	
+          int counter;
+	  int fib;
+	  int first;
+	  int second;
+
+	  fibonacciN = 11;
+	  fib = 0;
+	  first = 0;
+	  second = 1;
+	  counter = 2;
+
+      	  while(counter <= fibonacciN ){
+	  	fib = first + second;
+		first = second;
+		second = fib;
+		counter = counter + 1;
+	  }
+
+	  fibonacciResult = fib	  	  
+      }
+
+      //int factorial(int n){
+	//if (n==0){
+	//	return 1;
+	//}else{
+	//    return factorial(n-1)*n;
+	//}
+      //}
+}
+

@@ -1,0 +1,74 @@
+\documentclass[spanish]{article}
+\usepackage[spanish]{babel}
+\usepackage[utf8x]{inputenc}
+
+\title{
+  Sistemas de Orden Superior \\
+  Investigación \\
+  CC3007 - Construcción de Compiladores
+  \author{Carlos López Camey \\
+  Universidad del Valle de Guatemala}
+}
+\date{Septiembre del 2010}
+\maketitle
+
+\begin{document}
+
+\section{Introducción}
+
+\section{Motivación}
+
+Los sistemas de tipos estáticos han probado ser efectivos y un modelo práctico para diseñar y verificar especificaciones de una interfaz. No obstante, los primeros sistemas de tipos estáticos como el de \textbf{Pascal} están basados en la idea de que sus funciones y procedimientos, y por lo tanto sus operandos, tienen un único tipo (lenguajes monomórficos). En contraste, los lenguajes polimórficos permiten a valores o variables tener más de un tipo. 
+
+Los sistemas polimórficos permiten hacer abstracciones sobre un tipo. \textbf{Ejemplo:} podemos decir que una lista de enteros (denotada \textit{List[Int]}) es un tipo donde \textit{List} es un constructor de tipos, que por ahora diremos que su función es ``tomar'' un tipo para revelar otro tipo.  
+
+La abstracción sobre tipos es muy útil. Podríamos, por ejemplo, definir una función \textit{reverse} sobre una \textit{List[A]} que funciona para cualquier elemento de tipo \textit{A}. Decimos que los lenguajes que nos permiten hacer este tipo de abstracción tienen \textbf{Polimórfismo de primer-orden}; lenguajes como \textbf{Java} y \textbf{C\#} tienen polimorfismo de primer-orden.
+
+Otros lenguajes de programación nos permiten definir nuestros propios operadores de tipos, es decir, abstraen sobre constructores de tipos. A esta característica le llamamos \textbf{Polimórfismo de alto-orden}.
+
+\subsection{Objetivos}
+
+\subsection{Objetivos teóricos:}
+\begin{enumerate}
+\item Definir qué es polimorfismo y los tipos de polimorfismo de primer-orden que existen.
+\item Definir la equivalencia de tipos sobre el polimorfismo de primer-orden y de orden-superior.
+\item Utilizando el isomorfismo de \textit{Curry-Howard}:
+  \begin{itemize}
+  \item Definir el sistema $F$ para el polimorfismo de primer-orden y resaltar propiedades más importantes.
+  \item Definir el sistema $F_\omega$ para el polimorfismo de orden-superior y resaltar propiedades más importantes.
+  \end{itemize}
+\end{enumerate}
+\pagebreak
+\subsection{Objetivos prácticos:}
+\begin{enumerate}
+\item Borramiento y reconstrucción de tipos.
+\item Verificación de tipos en un compilador.
+\item Ejemplificar con un lenguaje de programación que soporte polimorfismo de orden-superior.
+  \begin{itemize}
+  \item Definición y usos de un \textit{Monad}.
+  \end{itemize}
+\end{enumerate}
+
+\section{Polimorfismo de primer orden}
+
+\subsection{Tipos de polimorfismo}
+
+\subsection{El sistema $F$}
+
+\subsection{\textit{Erasure} y Reconstrucción de tipos}
+
+\subsection{Ejemplos}
+
+\section{Polimorfismo de alto orden}
+
+\subsection{El sistema $F_\omega$}
+
+\subsection{Ejemplos}
+
+\section{Verificación de tipos}
+
+\section{Bibliografía}
+
+\end{document}
+
+

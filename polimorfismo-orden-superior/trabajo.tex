@@ -1,0 +1,104 @@
+\title{
+  Sistemas de Orden Superior \\
+  CC3007 - Construcción de Compiladores
+}
+
+\author{
+        Carlos López Camey \\
+        Departamento de Ciencias de la Computación\\
+            \and
+        Juan Fernando Valdés\\
+        Departamento de Matemáticas\\\\
+        Universidad del Valle de Guatemala}
+}
+
+\date{\today}
+
+\documentclass[spanish,11pt]{article}
+\usepackage[spanish]{babel}
+\usepackage[utf8x]{inputenc}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\end{abstract}
+
+\begin{center}
+\textbf{Notación}
+\end{center}
+\begin{center}
+  \begin{tabular}{r|l}
+    $x:T$ & x es de tipo $T$ \\
+    $List[T]$ & lista de elementos de tipo $T$ \\
+    $T <: U$ & $T$ es un subtipo de $U$ \\
+  \end{tabular}
+\end{center}
+
+
+\section{Introducción - Motivación}
+
+Los sistemas de tipos estáticos en los lenguajes de programación han probado ser efectivos y un modelo bastante práctico para diseñar y verificar especificaciones de una interfaz. No obstante, los primeros sistemas de tipos estáticos como el de \textbf{Pascal} están basados en la idea de que sus funciones y procedimientos, y por lo tanto sus operandos, tienen un único tipo (lenguajes monomórficos). En contraste, los lenguajes polimórficos permiten a valores o variables tener más de un tipo. 
+
+Los sistemas polimórficos permiten hacer abstracciones sobre un tipo $T$. Pr ejemplo, podríamos decir que una lista de números enteros (denotada \textit{List[Int]}) es un tipo donde \textit{List} es un constructor de tipos, que por ahora diremos que su función es ``tomar'' un tipo para revelar otro tipo.  
+
+La abstracción sobre tipos es muy útil. Podríamos, por ejemplo, definir una función \textit{reverse} sobre una \textit{List[A]} que funciona para cualquier elemento de tipo \textit{A}. Decimos que los lenguajes que nos permiten hacer este tipo de abstracción soportan \textbf{Polimórfismo de primer-orden}; lenguajes como \textbf{Java} y \textbf{C\#} soportan polimorfismo de primer-orden.
+
+Otros lenguajes de programación nos permiten definir nuestros propios operadores de tipos, es decir, abstraen sobre constructores de tipos. A esta característica le llamamos \textbf{Polimórfismo de alto-orden}.
+
+\subsection{Objetivos}
+
+\subsection{Objetivos teóricos:}
+\begin{enumerate}
+\item Definir qué es polimorfismo y los tipos de polimorfismo de primer-orden que existen.
+\item Definir la equivalencia de tipos sobre el polimorfismo de primer-orden y de orden-superior.
+\item Utilizando el isomorfismo de \textit{Curry-Howard}:
+  \begin{itemize}
+  \item Definir el sistema $F$ para el polimorfismo de primer-orden y resaltar propiedades más importantes.
+  \item Definir el sistema $F_\omega$ para el polimorfismo de orden-superior y resaltar propiedades más importantes.
+  \end{itemize}
+\end{enumerate}
+
+\subsection{Objetivos prácticos:}
+\begin{enumerate}
+\item Borramiento y reconstrucción de tipos.
+\item Verificación de tipos en un compilador.
+\item Ejemplificar con un lenguaje de programación que soporte polimorfismo de orden-superior.
+  \begin{itemize}
+  \item Definición y usos de un \textit{Monad}.
+  \end{itemize}
+\end{enumerate}
+
+\section{Universos y lenguajes tipíficados}
+Para comenzar nuestro trabajo, nos preguntamos \textit{Qué es un tipo?}. Consideremos un universo no tipíficado, el universo de las cadenas de bits en la memoria de una computadora. ``No tipíficado'' realmente significa que existe únicamente un tipo, una palabra de memoria, que es una cadena de bits de tamaño fijo. No podríamos diferenciar un número de un caracter, o un caracter de un puntero. Los tipos tienen como propósito, categorizar a los elementos de un universo.
+
+En un lenguaje tipíficado, podemos declarar variables con tipos. Por ejemplo $n:Int$, $b:Boolean$ donde $n$ y $b$ los únicos valores que podrán tomar durante la ejecución del programa son números enteros y valores booleanos (\textit{true} y \textit{false}). La tipificación de un lenguaje categoriza nuestros datos de tal manera que podramos codificarlo en una manera \textit{segura}. De esta manera, estaríamos seguros que el compilador de un lenguaje no dejaría sumar un número entero con un valor booleano (típicamente) y ahorrando errores de ejecución en tiempo de compilación.
+
+\section{Polimorfismo de primer orden}
+
+Comencemos por definir brevemente que es polimorfismo y los tipos de polimorfismo que existen. Usaremos el lenguaje Scala para ejemplificar. Los sistemas tipíficados 
+
+
+\subsection{Tipos de polimorfismo}
+
+\subsection{El sistema $F$}
+
+\subsection{\textit{Erasure} y Reconstrucción de tipos}
+
+\subsection{Ejemplos}
+
+\section{Polimorfismo de alto orden}
+
+\subsection{El sistema $F_\omega$}
+
+\subsection{Ejemplos}
+
+\section{Verificación de tipos}
+
+\section{Bibliografía}
+
+\bibliographystyle{abbrv}
+\bibliography{main}
+
+\end{document}
+

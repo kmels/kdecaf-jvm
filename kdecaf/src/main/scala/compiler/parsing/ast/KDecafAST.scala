@@ -1,13 +1,11 @@
 package kmels.uvg.kdecaf.compiler.parsing.ast
 
 import kmels.uvg.kdecaf.compiler._
+import codegen._
 import semantics._
 import kmels.uvg.kdecaf.compiler.types.{aliases => typeAliases}
 import typeAliases._
 import scala.util.parsing.input.{Positional,Position}
-
-//import compiler.SymbolTable
-//import compiler.semantics._
 
 /**
  * ASTs class nodes
@@ -16,6 +14,34 @@ import scala.util.parsing.input.{Positional,Position}
  * @version 2.0
  * @since 1.0
  */
+package object IntermediateCodeMappers{
+  val globalFieldConstructor : Int => codegen.GlobalField = index => GlobalField(index)
+  val localFieldConstructor : Int => codegen.LocalField = index => LocalField(index)
+  
+  implicit def varTypeToJVMType(v:VarType):codegen.JVMTypes.JVMType = v.getUnderlyingType() match{
+    case "Int" | "Char" | "Boolean" => codegen.JVMTypes.INT
+    case "void" => codegen.JVMTypes.VOID
+  }
+
+  implicit def scopeToScopeName(scope:KScope):String = scope.scopeName
+  implicit def statementToStatementList(statement:codegen.Statement):List[codegen.Statement] = List(statement)
+  implicit def statementToBody(statement:codegen.Statement):codegen.Body = codegen.MethodBody(List(statement))
+  implicit def statementListToBody(statements:List[codegen.Statement]):codegen.Body = codegen.MethodBody(statements)
+  implicit def bodyToStatements(body:codegen.Body):List[codegen.Statement] = body.computations
+}
+
+import IntermediateCodeMappers._
+
+trait NoCodeMapping{
+  def imap(scope:KScope):codegen.Body = codegen.MethodBody(Nil)
+}
+
+trait KScope extends InnerType{
+  val scopeName:String
+
+  def getField(varName:String):Field = CodegenFields.getField(varName,scopeName)
+}
+
 trait Node extends Positional with InnerType{
   override def toString = getClass.getName
   implicit def s(s:String):Node = new StringWrapper(s)
@@ -73,6 +99,24 @@ case class Program(val name:String, val declarations:List[Declaration]) extends 
 	SemanticResults(declarationResults : _* )
     }
   )
+
+  def imap:List[codegen.ClassMember] = {
+    var globalVarsCounter = 0
+
+    declarations.map(_ match{
+      case varDcl:VarDeclaration => {
+	globalVarsCounter += 1
+	varDcl.imap[GlobalField](globalFieldConstructor,globalVarsCounter)	
+      }
+      case methodDecl:MethodDeclaration => {
+	methodDecl.imap
+      }
+      case x => {
+	println("HEY: "+x)
+	null
+      }
+    })
+  }
 }
 
 abstract class Declaration extends Node with SemanticRule{
@@ -98,8 +142,9 @@ case class VarDeclaration(val varType:VarType, val name:String) extends Declarat
   val semanticAction = SemanticAction(
     varScope => {
       val checkDuplicatesResult = validateDuplicates(varScope)
-      SymbolTable.put((name,varScope),varType) //place this symbol in SymTable
-
+      SymbolTable.put((name,varScope),varType) //place this symbol in SymTable      
+      CodegenFields.place(name,varScope)
+		 
       SemanticResults(
 	checkDuplicatesResult,varType.semanticAction(varScope)
       )
@@ -107,6 +152,10 @@ case class VarDeclaration(val varType:VarType, val name:String) extends Declarat
       checkDuplicatesResult
     }
   )
+
+  def imap[T <: codegen.Field](f: Int => codegen.Field, index:Int):codegen.TwoAddressAssignment = varType.getUnderlyingType() match{
+    case "Int" | "Char" | "Boolean"  =>  TwoAddressAssignment(f(index),codegen.Constants.NULL)
+  }
 }
 
 case class StructDeclaration(val name:String, val value:Struct) extends Declaration{  
@@ -124,26 +173,44 @@ case class StructDeclaration(val name:String, val value:Struct) extends Declarat
   )
 }
 
-case class MethodDeclaration(val methodType:VarType,val name:String,val parameters:List[Parameter],val codeBlock:Block) extends Declaration with NoInnerType{ 
+case class MethodDeclaration(val methodType:VarType,val name:String,val parameters:List[Parameter],val codeBlock:Block) extends Declaration with NoInnerType with KScope { 
   val children:List[Node] = List[Node](methodType,name)++parameters:+codeBlock  
+
+  val scopeName = this.name
 
   val semanticAction = SemanticAction(
     methodScope => {
+      parameters.foreach(p => {
+	SymbolTable.put((p.name,this.name),p)
+      })
       validateDuplicates(methodScope)
-
+      
       //check no duplicates in parameter names
       val ps = parameters.map(_.name)
       if (ps.diff(ps.toSet.toSeq) != Nil) //ugly code, TODO: write a "nub" function instead
 	SemanticError("duplicate parameter names found in method "+name)
       
+      parameters.foreach( p => CodegenFields.place(p.name,this.name) )
       //val symbolAttributes: SymbolAttributes = (methodType,parameters)      
       SymbolTable.put((this.name,methodScope),this)
       codeBlock.semanticAction(this.name)
     }
   )
+
+  def imap:Method = codegen.Method(
+    methodType,
+    this.name,{
+      var parameterCounter = 0
+      this.parameters.map(p => { 
+	parameterCounter += 1
+	codegen.Parameter(p.varType, parameterCounter)})      
+    },{
+      codeBlock.imap(this)
+    }    
+  )
 }
 
-trait VarType extends Expression with InnerType{
+trait VarType extends Expression with InnerType with NoCodeMapping{
   val children:List[Node] = Nil
 }
 
@@ -205,10 +272,11 @@ case class Struct(val value:List[VarDeclaration]) extends TypeConstructor[List[V
   val getUnderlyingType = () => value.mkString(",")
 }
 
-abstract class Parameter extends Node with NoInnerType{
+abstract class Parameter extends Node with InnerType{
   val varType:PrimitiveType[_]
   val name:String
   override val children:List[Node] = List(varType,name)
+  val getUnderlyingType = varType.getUnderlyingType
 }
 
 case class PrimitiveTypeParameter(val varType:PrimitiveType[AnyVal], val name:String) extends Parameter 
@@ -232,17 +300,52 @@ case class Block(val varDeclarations:List[VarDeclaration], val statements:List[S
 	(varDeclarationsSemanticResults ++ statementResults) : _*
       )
     }
-  )
+  )    
+
+  def imap(scope:KScope):codegen.MethodBody = {
+    var localVariablesCounter = 0
+    val computations:List[codegen.Statement] = statements.flatMap(_ match {
+      case returnS:ReturnStatement => returnS.imap(scope)
+      case assignment:Assignment => assignment.imap(scope).computations
+      case EmptyExpression => None
+      case conditionStatement:ConditionStatement => conditionStatement.imap(scope)
+      case e => {
+      println("AGUAS, encontro: "+e)
+	//codegen.DummyBody(e.toString).assignments
+	None
+      }
+    })
+    codegen.MethodBody(computations)
+  }
 }
 
-abstract class Statement extends Node with SemanticRule{
+abstract class Statement extends Node with SemanticRule {
   val children:List[Node]
+
+  def imap(scope:KScope): codegen.Body
 }
 
 trait ConditionStatement extends Statement{
   val expression:Expression
   val codeBlock:Block
-  
+
+  def nextBlockOfCode(scope:KScope):Option[codegen.Body]
+
+  def imap(scope:KScope):codegen.Body  = {
+    val blockStatements = codeBlock.imap(scope)       
+    val predicate:codegen.Body = expression.imap(scope)
+    val nextBlockComputations:List[codegen.Statement] = nextBlockOfCode(scope) match { case Some(body) => body.computations ; case _ => Nil }
+    val nextBlockLabel = CodegenLabelMaker(scope)
+    val predicateAndGotoStatements:List[codegen.Statement] = predicate.computations :+
+    codegen.GotoStatement(
+      predicate.lastEvaluatedField,      
+      nextBlockLabel
+    ) 
+
+    println("NEXT BLOCK: "+nextBlockLabel+": \n\n\t\t"+nextBlockComputations.mkString("\n\t\t"))
+    predicateAndGotoStatements ++ blockStatements.computations ++ List(nextBlockLabel) ++ nextBlockComputations
+  }
+    
   //assert on the type of the expression, it has to be boolean
   val assertOnBooleanExprAndDoBlock = SemanticAction(
     scope => {
@@ -264,6 +367,8 @@ case class IfStatement(val expression:Expression,val codeBlock:Block, val elseBl
     case _ => List(expression,codeBlock)
   } 
 
+  def nextBlockOfCode(scope:KScope):Option[codegen.Body] = elseBlock match { case Some(block) => Some(block.imap(scope)) ; case _ => None}
+
   val semanticAction = SemanticAction(
     scope => {
       val assert1Result = assertOnBooleanExprAndDoBlock(scope)
@@ -272,7 +377,7 @@ case class IfStatement(val expression:Expression,val codeBlock:Block, val elseBl
 	case _ => SemanticSuccess
       }
       SemanticResults(assert1Result,elseResult)
-    }        
+    }
   )
 }
 
@@ -280,9 +385,11 @@ case class WhileStatement(val expression:Expression,val codeBlock:Block) extends
   val children:List[Node] = List(expression,codeBlock)
 
   val semanticAction = assertOnBooleanExprAndDoBlock
+
+  def nextBlockOfCode(scope:KScope) = None
 }
 
-case class MethodCall(val name:String,val arguments:List[Expression]) extends Expression{
+case class MethodCall(val name:String,val arguments:List[Expression]) extends Expression with NoCodeMapping{
   val children:List[Node] = List[Node](name)++arguments
 
   val getUnderlyingType = () => SymbolTable.get(this.name,"Program") match{
@@ -333,6 +440,23 @@ case class ReturnStatement(val expression:Option[Expression]) extends Statement 
     case _ => Nil
   }
 
+  def imap(scope:KScope):codegen.Body = {
+    val returnJvmType:codegen.JVMTypes.JVMType = SymbolTable((scope.scopeName,"Program")).asInstanceOf[MethodDeclaration].methodType
+
+    expression match {
+      case Some(exp) => {
+	val expressionBody = exp.imap(scope)
+	println("RETURN EXP BODY: "+expression)
+	  expressionBody.computations :+ codegen.Return(
+	    returnJvmType,Some(expressionBody.lastEvaluatedField)
+	  )
+      }
+      case _ => {
+	List(codegen.Return(returnJvmType,None))
+      }
+    }        
+  }
+
   val semanticAction = SemanticAction(
     attributes => {
       //the type of the return expression must be the same as declared in method declaration
@@ -340,11 +464,17 @@ case class ReturnStatement(val expression:Option[Expression]) extends Statement 
 	case Some(node) => node match {
 	  case method:MethodDeclaration => {
 	    expression match{
-	      case Some(exp) => 
+	      case Some(exp) => {
+		val returnInnerType:InnerType = exp match{
+		  case location:Location => SymbolTable.getSymbolName(location.name).getOrElse(EmptyExpression)
+		  case _ => exp
+		}
+		
 		typesShouldBeEqualIn(
-		  method.methodType,exp,
-		  "found: "+exp.getUnderlyingType()+"; expected: "+method.methodType.getUnderlyingType()
+		  method.methodType,exp,		    
+		  "found: "+exp.getUnderlyingType()+"; expected: "+method.methodType.getUnderlyingType()		  
 		)
+	      }	      
 	      case _ => 
 		if (method.methodType.getUnderlyingType() != "void")
 		  SemanticError("found: void; expected: "+method.methodType.getUnderlyingType())
@@ -373,6 +503,17 @@ case class Assignment(val location:Location,val expression:Expression) extends S
       SemanticResults(typeEqualityResult,location.semanticAction(attributes),expression.semanticAction(attributes))
     }
   )
+
+  def imap(scope:KScope):codegen.MethodBody = {
+    val expressionBody = expression.imap(scope)
+
+    val thisAssignment = TwoAddressAssignment(
+	CodegenFields.getField(location.name,scope.scopeName),
+	expressionBody.lastEvaluatedField
+    )
+        
+    codegen.MethodBody( expressionBody.computations :+ thisAssignment )
+  }
 }
 
 abstract class Location extends Expression with InnerType{
@@ -380,12 +521,14 @@ abstract class Location extends Expression with InnerType{
   val optionalMember:Option[Location]  
 }
 
-case class SimpleLocation(val name:String, val optionalMember:Option[Location] = None) extends Location with SemanticRule{
+case class SimpleLocation(val name:String, val optionalMember:Option[Location] = None) extends Location with SemanticRule {
   val children:List[Node] = optionalMember match{
     case Some(member) => List(name,member)
     case _ => List(s(name))
   }  
   
+  def imap(scope:KScope) = CodegenFields.getField(this.name,scope.scopeName)
+
   //in case the optional member is trying to get fetched and it doesn't exist 
   object SemanticErrorType extends Enumeration{
     type SemanticErrorType = Value
@@ -440,7 +583,7 @@ case class SimpleLocation(val name:String, val optionalMember:Option[Location] =
   )
 }
 
-case class ArrayLocation(val name:String, val index:Expression, val optionalMember:Option[Location] = None) extends Location{
+case class ArrayLocation(val name:String, val index:Expression, val optionalMember:Option[Location] = None) extends Location with NoCodeMapping{
   val children:List[Node] = optionalMember match{
     case Some(member) => List(name,index,member)
     case _ => List(name)
@@ -518,9 +661,11 @@ case class ArrayLocation(val name:String, val index:Expression, val optionalMemb
   )
 }
 
-abstract class Expression extends Statement with InnerType with SemanticRule
+abstract class Expression extends Statement with InnerType with SemanticRule{
+  def imap(scope:KScope):codegen.Body
+}
 
-object EmptyExpression extends Expression with NoInnerType with NoSemanticAction{
+object EmptyExpression extends Expression with NoInnerType with NoSemanticAction with NoCodeMapping{
   val children = Nil
 }
 
@@ -541,7 +686,7 @@ trait ExpressionOperation[T] extends Expression{
   override def toString = super.toString+": "+m.toString
 }
 
-trait BinaryOperation[T] extends ExpressionOperation[T]{
+trait BinaryOperation[T] extends ExpressionOperation[T] {
   val exp1:Expression
   val exp2:Expression
 
@@ -550,38 +695,52 @@ trait BinaryOperation[T] extends ExpressionOperation[T]{
   val semanticAction = SemanticAction(
     attributes => {
       //both exp1 and exp2 must have the same inner type            
-
       typesShouldBeEqualIn(
 	exp1,exp2,
 	"cannot operate "+ exp1 +" and "+exp2 +"; both must be of the same type. Found: "+exp1.getUnderlyingType+" and "+exp2.getUnderlyingType
       )
-//      if (exp1.getUnderlyingType() != exp2.getUnderlyingType())
-//	SemanticError("cannot operate "+ exp1 +" and "+exp2 +"; both must be of the same type. Found: "+exp1.getUnderlyingType+" and "+exp2.getUnderlyingType)
     }
   )
+
+  val codegenOperator:codegen.Operators.Operator
+
+  def imap(scope:KScope):codegen.MethodBody = {
+    val expression2Body:codegen.Body = exp2.imap(scope)
+    val expression1Body:codegen.Body = exp1.imap(scope)
+
+    val thisComputation = ThreeAddressAssignment(
+      CodegenFields.placeAndGetTempField(scope.scopeName),
+	expression1Body.lastEvaluatedField,
+	expression2Body.lastEvaluatedField,
+	codegenOperator
+    )
+
+    codegen.MethodBody(expression1Body.computations ++ expression2Body.computations :+ thisComputation)
+  }
 }
 
-trait UnaryOperation[T] extends ExpressionOperation[T] with NoSemanticAction{
+trait UnaryOperation[T] extends ExpressionOperation[T] with NoSemanticAction with NoCodeMapping{
   val exp:Expression
   val children:List[Expression] = List(exp)
+
 }
 
-case class ExpressionAdd(val exp1:Expression,val exp2:Expression)(implicit val m:Manifest[Int]) extends BinaryOperation[Int] with InnerInt
+case class ExpressionAdd(val exp1:Expression,val exp2:Expression)(implicit val m:Manifest[Int]) extends BinaryOperation[Int] with InnerInt{val codegenOperator = codegen.Operators.ADDITION }
 
-case class ExpressionSub(val exp1:Expression,val exp2:Expression)(implicit val m:Manifest[Int]) extends BinaryOperation[Int] with InnerInt
-case class ExpressionMult(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Int]) extends BinaryOperation[Int] with InnerInt
-case class ExpressionDiv(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Int]) extends BinaryOperation[Int] with InnerInt
-case class ExpressionMod(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Int]) extends BinaryOperation[Int] with InnerInt
+case class ExpressionSub(val exp1:Expression,val exp2:Expression)(implicit val m:Manifest[Int]) extends BinaryOperation[Int] with InnerInt{val codegenOperator = codegen.Operators.SUBSTRACTION}
+case class ExpressionMult(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Int]) extends BinaryOperation[Int] with InnerInt{val codegenOperator = codegen.Operators.MULTIPLICATION}
+case class ExpressionDiv(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Int]) extends BinaryOperation[Int] with InnerInt{val codegenOperator = codegen.Operators.DIVISION}
+case class ExpressionMod(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Int]) extends BinaryOperation[Int] with InnerInt{val codegenOperator = codegen.Operators.MOD}
 
-case class ExpressionAnd(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] with InnerBool
-case class ExpressionOr(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] with InnerBool
+case class ExpressionAnd(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] with InnerBool{val codegenOperator = codegen.Operators.AND}
+case class ExpressionOr(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] with InnerBool{val codegenOperator = codegen.Operators.OR}
 
-case class ExpressionLessOrEquals(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] with InnerBool
-case class ExpressionLess(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] with InnerBool
-case class ExpressionGreater(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] with InnerBool
-case class ExpressionGreaterOrEquals(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] with InnerBool
-case class ExpressionEquals(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] with InnerBool
-case class ExpressionNotEquals(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] with InnerBool
+case class ExpressionLessOrEquals(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] with InnerBool{val codegenOperator = codegen.Operators.LESSEQUALSTHAN}
+case class ExpressionLess(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] with InnerBool{val codegenOperator = codegen.Operators.LESSTHAN}
+case class ExpressionGreater(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] with InnerBool{val codegenOperator = codegen.Operators.GREATERTHAN}
+case class ExpressionGreaterOrEquals(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] with InnerBool{val codegenOperator = codegen.Operators.GREATEREQUALSTHAN}
+case class ExpressionEquals(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] with InnerBool{val codegenOperator = codegen.Operators.EQUALS}
+case class ExpressionNotEquals(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] with InnerBool{val codegenOperator = codegen.Operators.NEQUALS}
 
 case class NegativeExpression(val exp:Expression)(implicit val m:Manifest[Int]) extends UnaryOperation[Int] with InnerInt
 case class NotExpression(val exp:Expression)(implicit val m:Manifest[Boolean]) extends UnaryOperation[Boolean] with InnerBool
@@ -592,18 +751,29 @@ abstract class Literal[+T](implicit m:Manifest[T]) extends Expression{
   override def toString = "Literal["+m+"]"
 }
 
-case class IntLiteral(val literal:Int)(implicit val m:Manifest[Int]) extends Literal[Int] with InnerInt with NoSemanticAction
+case class IntLiteral(val literal:Int)(implicit val m:Manifest[Int]) extends Literal[Int] with InnerInt with NoSemanticAction {
+  def imap(scope:KScope) = {
+    codegen.TwoAddressAssignment(
+      CodegenFields.placeAndGetTempField(scope),
+      codegen.Constants.ConstantField[Int](literal,0)
+    ) 
+  }
+}
 
-case class CharLiteral(val literal:Char)(implicit val m:Manifest[Char]) extends Literal[Char] with InnerChar with NoSemanticAction
+case class CharLiteral(val literal:Char)(implicit val m:Manifest[Char]) extends Literal[Char] with InnerChar with NoSemanticAction {
+  def imap(scope:KScope) = {
+    codegen.TwoAddressAssignment(
+      CodegenFields.placeAndGetTempField(scope),
+      codegen.Constants.ConstantField[Int](literal.toInt,0)
+    )
+  }
+}
 
-case class BoolLiteral(val literal:Boolean)(implicit val m:Manifest[Boolean]) extends Literal[Boolean] with InnerBool with NoSemanticAction
-
-/*trait SemanticActionPendiente extends SemanticRule{
-  self: Node =>
-
-  val semanticAction = SemanticAction(
-    attributes => {
-      SemanticError(this+" está pendiente")
-    }
-  )
-}*/
+case class BoolLiteral(val literal:Boolean)(implicit val m:Manifest[Boolean]) extends Literal[Boolean] with InnerBool with NoSemanticAction {
+  def imap(scope:KScope) = {
+    codegen.TwoAddressAssignment(
+      CodegenFields.placeAndGetTempField(scope),
+      codegen.Constants.ConstantField[Int](if (!literal) 0 else 1,0)
+    )
+  }
+}

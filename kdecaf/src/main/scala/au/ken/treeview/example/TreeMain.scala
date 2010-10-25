@@ -8,7 +8,7 @@ import au.ken.treeview._
 import au.ken.treeview.event._
 
 
-object TreeMain extends SimpleSwingApplication {
+object TreeMain {//extends SimpleSwingApplication {
   import Tree._
   import java.io._
   import java.awt.Color

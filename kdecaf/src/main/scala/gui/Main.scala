@@ -4,7 +4,7 @@ import scala.swing._
 import swing.event._
 import panels.{LeftPanel,RightPanel}
 
-object Main extends SimpleSwingApplication{
+object Main {//extends SimpleSwingApplication{
   def top = new MainFrame{
     title = "kDecaf!"
     

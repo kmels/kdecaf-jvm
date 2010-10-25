@@ -1,7 +1,8 @@
 package kmels.uvg.kdecaf.compiler.semantics
 
 import kmels.uvg.kdecaf.compiler
-import compiler.parsing.ast.{Node,InnerType}
+import compiler.parsing.ast.{Node,InnerType,Location,EmptyExpression}
+import compiler.SymbolTable
 import compiler.types.{aliases => typeAliases}
 import typeAliases._
 
@@ -12,13 +13,19 @@ import typeAliases._
  * @version 1.0
  * @since 2.0
  */
+
 trait SemanticRule{
   self: Node =>
     
   import typeAliases.Scope
 
+  val getInnerType : InnerType => InnerType = node => node match{
+    case location:Location => SymbolTable.getSymbolName(location.name).getOrElse(EmptyExpression)
+    case _ => node
+  }
+  
   val typesShouldBeEqualIn: (InnerType,InnerType,String) => SemanticResult = (node1,node2,message) => 
-    if (node1.getUnderlyingType() == node2.getUnderlyingType()) 
+    if (getInnerType(node1).getUnderlyingType() == getInnerType(node2).getUnderlyingType()) 
       SemanticSuccess 
     else 
       SemanticError(message)

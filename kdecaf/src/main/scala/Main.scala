@@ -7,7 +7,7 @@ import compiler.semantics._
 import compiler.types.aliases.SemanticErrorMessage
 
 object Main extends Application{
-  val path = System.getProperty("user.dir")+"/src/test/resources/semantics.decaf"
+  val path = System.getProperty("user.dir")+"/src/test/resources/codegen.decaf"
   val input = io.Source.fromFile(path).mkString
 
   println("Input: \n"+input+"\n\n")
@@ -31,12 +31,23 @@ object Main extends Application{
 //  println("Program semantic results: "+program.semanticAction("Program"))
 
   val errorMessages:List[SemanticErrorMessage] = getErrorMessages(program.semanticAction("Program"))
-    
+  
+  println("---------------\n\n\n\n")
+  println("Symbol Table: \n"+kmels.uvg.kdecaf.compiler.SymbolTable.mkString(",\n\t"))
+  println("---------------\n\n\n\n")
+  
   if (errorMessages.size > 0){	
     println(errorMessages.map(errorMessage => "Type Error:"+errorMessage._2+": "+errorMessage._1).mkString("\n"))
   }	
-  else
-    println("well-typed")
- 
-  println("Symbol Table: "+kmels.uvg.kdecaf.compiler.SymbolTable.mkString(",\n"))
+  else{
+    println("well-typed")  
+
+    println("---------------\n\n\n\n")
+    
+    val intermediateCode = program.imap.foreach(println _)
+    
+    println("---------------\n\n\n\n")
+    
+    println("Fields: \n\t"+kmels.uvg.kdecaf.compiler.CodegenFields.toList.sortBy(_._1._2).mkString(",\n\t"))
+  }    
 }
