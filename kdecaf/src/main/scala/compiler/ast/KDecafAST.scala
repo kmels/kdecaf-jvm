@@ -495,10 +495,18 @@ case class Assignment(val location:Location,val expression:Expression) extends S
 
   val semanticAction = SemanticAction(
     attributes => {
-      val typeEqualityResult = typesShouldBeEqualIn(
-	location,expression,
-	"cannot assign expression of type "+expression.getUnderlyingType()+" to "+location.name+" of declared type "+location.getUnderlyingType()
-      )
+      val typeEqualityResult = {	
+	val x = typesShouldBeEqualIn(
+	  location,expression,
+	  "cannot assign expression of type "+expression.getUnderlyingType()+" to "+location.name+" of declared type "+location.getUnderlyingType()
+	)
+
+	x match {
+	  case SemanticError(x) => println("semantic error: | location="+location+", location.name="+location.name)
+	  case _ => {}
+	}
+	x
+      }
 
       SemanticResults(typeEqualityResult,location.semanticAction(attributes),expression.semanticAction(attributes))
     }

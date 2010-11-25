@@ -44,6 +44,9 @@ trait Field extends AnyValue  {
 
 case class GlobalField(val index:Int) extends Field{ override def toString = "g["+index+"]" }
 case class LocalField(val index:Int) extends Field{ override def toString = "f["+index+"]" }
+//case class GlobalArrayField(val index:Int,val innerIndex:Int) extends GlobalField(index){ override def toString = "g["+index+"@"+innerIndex+"]"}
+//case class GlobalLocalField(val index:Int, val innerIndex:Int) extends LocalField(index){ override def toString = "f["+index+"@"+innerIndex+"]"}
+
 
 case class GotoStatement(val evaluatedField:Field, val addressLabel:Label) extends Statement{
   override def toString = "goto "+addressLabel+" if "+evaluatedField.toString+" is false"

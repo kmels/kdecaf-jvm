@@ -24,5 +24,8 @@ syntax: regexp
 (.*)\.dvi
 (.*)\.pdf
 (.*)\.aux
+(.*)\.jar
+(.*)\.class
+jasmin-2.4/.*
 
 

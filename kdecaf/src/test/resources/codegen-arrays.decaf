@@ -1,0 +1,24 @@
+class Program {
+      int array [50];      
+      
+
+      void main(){
+           boolean esPar [50];	   
+      	   int i; // f[2]
+	   int tamano; //f[3]
+	   i = 0;
+	   tamano = 50;
+
+	   while(i < tamano){
+	   	   array[i] = i*2;		  
+		   if (i/2 == 0){
+		      esPar[i] = true;
+		   }else {
+		      esPar[i] = false;
+		   }		      
+	   }
+
+	   i = -1;
+      }      	     
+}
+

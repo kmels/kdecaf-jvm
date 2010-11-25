@@ -7,7 +7,7 @@ import compiler.semantics._
 import compiler.types.aliases.SemanticErrorMessage
 
 object Main extends Application{
-  val path = System.getProperty("user.dir")+"/src/test/resources/codegen.decaf"
+  val path = System.getProperty("user.dir")+"/src/test/resources/codegen-arrays.decaf"
   val input = io.Source.fromFile(path).mkString
 
   println("Input: \n"+input+"\n\n")
@@ -40,7 +40,7 @@ object Main extends Application{
     println(errorMessages.map(errorMessage => "Type Error:"+errorMessage._2+": "+errorMessage._1).mkString("\n"))
   }	
   else{
-    println("well-typed")  
+    println("well-typed")
 
     println("---------------\n\n\n\n")
     
