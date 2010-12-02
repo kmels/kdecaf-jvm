@@ -1,0 +1,15 @@
+class Program {     
+      void main(){	                	  
+	  int uno;
+	  int cinco;      	   
+	  uno = 1;
+	  cinco = 5	  
+	  println uno;
+
+	  println "UNO"
+	  println uno
+	  println "CINCO"
+	  println cinco
+      }
+}
+

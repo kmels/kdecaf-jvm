@@ -7,13 +7,14 @@ import compiler.semantics._
 import compiler.types.aliases.SemanticErrorMessage
 
 object Main extends Application{
-  val path = System.getProperty("user.dir")+"/src/test/resources/codegen-arrays.decaf"
+  val pathToResourcesDir = System.getProperty("user.dir")+"/src/test/resources/"
+  val path = pathToResourcesDir+"condicionales.kdecaf"
   val input = io.Source.fromFile(path).mkString
 
-  println("Input: \n"+input+"\n\n")
+  //println("Input: \n"+input+"\n\n")
   import util.parsing.combinator.{lexical,syntactical}
   val result = new KDecafParser() parse(input)
-  println("AST: \n"+result+"\n\n")
+  //println("AST: \n"+result+"\n\n")
 
   import compiler.parsing.ast._
   import compiler.semantics._
@@ -32,9 +33,9 @@ object Main extends Application{
 
   val errorMessages:List[SemanticErrorMessage] = getErrorMessages(program.semanticAction("Program"))
   
-  println("---------------\n\n\n\n")
-  println("Symbol Table: \n"+kmels.uvg.kdecaf.compiler.SymbolTable.mkString(",\n\t"))
-  println("---------------\n\n\n\n")
+  //println("---------------\n\n\n\n")
+  //println("Symbol Table: \n"+kmels.uvg.kdecaf.compiler.SymbolTable.mkString(",\n\t"))
+  //println("---------------\n\n\n\n")
   
   if (errorMessages.size > 0){	
     println(errorMessages.map(errorMessage => "Type Error:"+errorMessage._2+": "+errorMessage._1).mkString("\n"))
@@ -42,12 +43,26 @@ object Main extends Application{
   else{
     println("well-typed")
 
+    //println("---------------\n\n\n\n")
+    
+    val imap = program.imap
+    val intermediateCode = imap.foreach(println _)
+    
     println("---------------\n\n\n\n")
     
-    val intermediateCode = program.imap.foreach(println _)
-    
-    println("---------------\n\n\n\n")
-    
-    println("Fields: \n\t"+kmels.uvg.kdecaf.compiler.CodegenFields.toList.sortBy(_._1._2).mkString(",\n\t"))
+    //println("Fields: \n\t"+kmels.uvg.kdecaf.compiler.CodegenFields.toList.sortBy(_._1._2).mkString(",\n\t"))
+
+    val jmap = program.jmap(imap)
+    println("Jasmin code: \n\n\n"+jmap)
+
+    val pathToOutput = pathToResourcesDir+"jasmin-2.4/Program.j"    
+
+    var out_file = new java.io.FileOutputStream(pathToOutput) 
+    var out_stream = new java.io.PrintStream(out_file) 
+    out_stream.print(jmap) 
+    out_stream.close 
+    //val file = new java.io.RandomAccessFile(new java.io.File(pathToOutput),"rw")
+    //file.writeBytes(jmap)
+    println("pathToOutput: "+pathToOutput)
   }    
 }

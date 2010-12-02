@@ -71,6 +71,10 @@ trait InnerChar extends InnerType{
   val getUnderlyingType = () => "Char"
 }
 
+trait InnerString extends InnerType{
+  val getUnderlyingType = () => "String"
+}
+
 trait InnerTypeVoid extends InnerType{
   val getUnderlyingType = () => "void"
 }
@@ -100,6 +104,9 @@ case class Program(val name:String, val declarations:List[Declaration]) extends 
     }
   )
 
+  /**
+   * Maps to intermediate code
+   */
   def imap:List[codegen.ClassMember] = {
     var globalVarsCounter = 0
 
@@ -116,6 +123,14 @@ case class Program(val name:String, val declarations:List[Declaration]) extends 
 	null
       }
     })
+  }
+
+  /**
+   * Maps to jasmin code
+   */ 
+  def jmap(xs:List[codegen.ClassMember]):String = {
+    implicit val tabSpaces = 0
+    ".class "+this.name + "\n.super java/lang/Object\n"+xs.map(_.jasminCode).mkString("\n")
   }
 }
 
@@ -306,6 +321,7 @@ case class Block(val varDeclarations:List[VarDeclaration], val statements:List[S
     var localVariablesCounter = 0
     val computations:List[codegen.Statement] = statements.flatMap(_ match {
       case returnS:ReturnStatement => returnS.imap(scope)
+      case printStatement:PrintStatement[_] => printStatement.imap(scope)
       case assignment:Assignment => assignment.imap(scope).computations
       case EmptyExpression => None
       case conditionStatement:ConditionStatement => conditionStatement.imap(scope)
@@ -342,7 +358,7 @@ trait ConditionStatement extends Statement{
       nextBlockLabel
     ) 
 
-    println("NEXT BLOCK: "+nextBlockLabel+": \n\n\t\t"+nextBlockComputations.mkString("\n\t\t"))
+    //println("NEXT BLOCK: "+nextBlockLabel+": \n\n\t\t"+nextBlockComputations.mkString("\n\t\t"))
     predicateAndGotoStatements ++ blockStatements.computations ++ List(nextBlockLabel) ++ nextBlockComputations
   }
     
@@ -359,6 +375,23 @@ trait ConditionStatement extends Statement{
       codeBlock.semanticAction(scope)
     }
   )
+}
+
+trait PrintStatement[T] extends Statement with NoSemanticAction{
+  val exp:T
+  override def imap(scope:KScope):codegen.Body
+  val getUnderlyingType  = () => "void"
+  val children = Nil  
+}
+
+case class PrintString(val exp:String) extends PrintStatement[String]{
+  println("PRINT STRING: "+exp)
+  override def imap(scope:KScope):codegen.Body = codegen.PrintLineStatement(exp)
+}
+
+case class PrintExpression(val exp:Expression) extends PrintStatement[Expression]{
+  println("PRINT EEXP: "+exp)
+  override def imap(scope:KScope):codegen.Body = codegen.PrintIntegerStatement(exp.imap(scope).lastEvaluatedField)
 }
 
 case class IfStatement(val expression:Expression,val codeBlock:Block, val elseBlock:Option[Block] = None) extends ConditionStatement with InnerTypeVoid{
@@ -446,7 +479,7 @@ case class ReturnStatement(val expression:Option[Expression]) extends Statement 
     expression match {
       case Some(exp) => {
 	val expressionBody = exp.imap(scope)
-	println("RETURN EXP BODY: "+expression)
+	//println("RETURN EXP BODY: "+expression)
 	  expressionBody.computations :+ codegen.Return(
 	    returnJvmType,Some(expressionBody.lastEvaluatedField)
 	  )
@@ -773,6 +806,15 @@ case class CharLiteral(val literal:Char)(implicit val m:Manifest[Char]) extends 
     codegen.TwoAddressAssignment(
       CodegenFields.placeAndGetTempField(scope),
       codegen.Constants.ConstantField[Int](literal.toInt,0)
+    )
+  }
+}
+
+case class StringLiteral(val literal:String)(implicit val m:Manifest[String]) extends Literal[String] with InnerString with NoSemanticAction{
+  def imap(scope:KScope) = {
+    codegen.TwoAddressAssignment(
+      CodegenFields.placeAndGetTempField(scope),
+      codegen.StringValue(literal)
     )
   }
 }

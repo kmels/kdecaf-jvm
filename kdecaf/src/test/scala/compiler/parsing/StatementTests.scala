@@ -27,7 +27,7 @@ class StatementTests extends ParserTest[Statement] with FunSuite{
       method2();
     }"""
     accept(input)
-  }
+  }  
 
   test("while statements"){
     input = """
@@ -63,6 +63,16 @@ class StatementTests extends ParserTest[Statement] with FunSuite{
 	m();
       }
     }"""
+    accept(input)
+  }
+
+  test("empty print statement"){
+    input = "println"
+    accept(input)
+  }
+
+  test("print statement"){
+    input = "println \"xd\""
     accept(input)
   }
 }

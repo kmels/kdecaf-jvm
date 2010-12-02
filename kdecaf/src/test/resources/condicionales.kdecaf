@@ -1,0 +1,22 @@
+class Program {     
+      void main(){	                	  
+	  int a;
+	  int b;
+      	   
+	  a = 10;
+	  b = 100;
+	  	  
+	  println "A ES: ";
+	  println a
+	  println "B ES: ";
+	  println b
+	  
+	  if (a < b){
+	     println "A ES MENOR QUE B"
+	  }
+	  else	{
+	     println "A ES MENOR QUE B"	
+	  }	     
+      }
+}
+

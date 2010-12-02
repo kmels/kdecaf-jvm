@@ -81,7 +81,13 @@ class KDecafParser extends StandardTokenParsers with PackratParsers{
   
   lazy val statements:PackratParser[List[Statement]] =rep(statement)
 
-  lazy val statement:PackratParser[Statement] = positioned(ifStatement | whileStatement | returnStatement | methodCall <~ ";" | block | assignment | expressionStatement)
+  lazy val statement:PackratParser[Statement] = positioned(ifStatement | whileStatement | returnStatement | methodCall <~ ";" | block | assignment | expressionStatement | printStatement)
+
+  lazy val printStatement:PackratParser[PrintStatement[_]] = printString | printExpression 
+
+  lazy val printString:PackratParser[PrintString] = positioned("println" ~> stringLit ^^ { PrintString(_) } )
+  
+  lazy val printExpression:PackratParser[PrintExpression] = positioned("println" ~> expression ^^ { PrintExpression(_) } )
 
   lazy val expressionStatement:PackratParser[Expression] = expression <~ ";" | ";" ^^ {case ";" => EmptyExpression}
 
@@ -163,8 +169,12 @@ class KDecafParser extends StandardTokenParsers with PackratParsers{
   //expression without operations
   lazy val simpleExpression:PackratParser[Expression] = positioned(literal | "(" ~> expression <~ ")" | methodCall  | location)
 
-  lazy val literal:PackratParser[Literal[AnyVal]] = 
-    positioned(numericLit ^^ { lit => IntLiteral(lit.toInt)} | ("true"|"false") ^^ { case v => BoolLiteral(v.toBoolean)} | elem("char", x => { x.isInstanceOf[lexical.CharLit] }) ^^ {c => CharLiteral(c.chars.charAt(0))})
+  lazy val literal:PackratParser[Literal[Any]] = 
+    positioned(numericLit ^^ { lit => IntLiteral(lit.toInt)} 
+    		| ("true"|"false") ^^ { case v => BoolLiteral(v.toBoolean)} 
+    		| elem("char", x => { x.isInstanceOf[lexical.CharLit] }) ^^ {c => CharLiteral(c.chars.charAt(0))} 
+    		| stringLit ^^ { case v => StringLiteral(v)}
+    		)
  
   lazy val location:PackratParser[Location] = positioned(arrayLocation | ident ~ optionalLocation ^^ { 
     case id~optLocation => SimpleLocation(id,optLocation)

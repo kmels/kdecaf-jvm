@@ -10,7 +10,7 @@ class KDecafLexer extends StdLexical{
     | digit ~ rep( digit )                              ^^ { case first ~ rest => NumericLit(first :: rest mkString "") }
     | '\'' ~ (letter|digit) ~ '\''                              ^^ { case '\'' ~ char ~ '\'' => CharLit(char.toString) }
     | '\'' ~ rep( chrExcept('\'', '\n', EofCh) ) ~ '\'' ^^ { case '\'' ~ chars ~ '\'' => StringLit(chars mkString "") }
-    | '\"' ~ rep( chrExcept('\"', '\n', EofCh) ) ~ '\"' ^^ { case '\"' ~ chars ~ '\"' => StringLit(chars mkString "") }
+    | '\"' ~ rep( chrExcept('\"', '\n', EofCh) ) ~ '\"' ^^ { case '\"' ~ chars ~ '\"' => StringLit(chars mkString "") } 
     | EofCh                                             ^^^ EOF
     | '\'' ~> failure("unclosed string literal")        
     | '\"' ~> failure("unclosed string literal")        
@@ -22,7 +22,7 @@ class KDecafLexer extends StdLexical{
     override def toString = "'"+chars+"'"
   }
 
-  reserved ++= Set("class","struct","true","false","void","if","else","while","return","int","char","boolean")
+  reserved ++= Set("class","struct","true","false","void","if","else","while","return","int","char","boolean","println")
 
   override val delimiters = new HashSet[String] ++ Set("{","}",";","[","]","(",")",",","_","'",".","+","-","*","/","%","&&","||","<=","<",">",">=","==","!=","=")
 }

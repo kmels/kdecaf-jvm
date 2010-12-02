@@ -1,0 +1,6 @@
+class Program {     
+      void main(){	          
+	  println "Hola mundo"	  
+      }
+}
+

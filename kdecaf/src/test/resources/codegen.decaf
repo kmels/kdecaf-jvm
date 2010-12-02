@@ -46,8 +46,9 @@ class Program {
 	  int fib;
 	  int first;
 	  int second;
-
+	  
 	  fibonacciN = 11;
+	  println "JEJE"
 	  fib = 0;
 	  first = 0;
 	  second = 1;
