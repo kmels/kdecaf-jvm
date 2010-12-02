@@ -13,7 +13,7 @@ class Program {
 	  int c;
 
 	  a = 100;
-	  println "A:: ";
+	  println "A: ";
 	  println a;
 
 	  println "B=A+1: ";

@@ -181,12 +181,17 @@ case class Return(t: JVMType, val returnField:Option[Field]) extends Body with S
   }
 
   def jasminCode(implicit tabSpaces:Int) = {
+    val fieldString:String = returnField match{
+      case Some(field) => field.load
+      case _ => ""
+    }
+
     val returnString = t match {
       case JVMTypes.INT => "ireturn"
       case JVMTypes.VOID => "return"      
     }
 
-    StringBuilder(returnString)
+    StringBuilder(fieldString,returnString)
   }
 } 
 
@@ -298,7 +303,7 @@ case class MethodBody(val computations: List[Statement]) extends Body{
   def jasminCode(implicit tabSpace:Int):String = StringBuilder(
 
     (List(".limit stack 2000",
-      ".limit locals 10")++computations.map(_.jasminCode)) :_*
+      ".limit locals 50")++computations.map(_.jasminCode)) :_*
     )
 }
 

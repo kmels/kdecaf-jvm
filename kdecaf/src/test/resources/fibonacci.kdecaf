@@ -1,0 +1,42 @@
+class Program {     
+      int fib(int x){
+      	   int m;
+	   int m1;
+      	   int r;
+	   
+	   if (x < 2){
+	      r = 1;
+	   }else{
+	      m = x - 1;
+	      m1 = x - 2;
+	      r = fib(m) + fib (m1);
+	   }	  
+      	   
+	   return r;
+      }
+      
+      void main(){	                	  
+	  int n;
+	  int res;
+	  int init;
+	  int r;
+
+	  init = 0;
+	  n = 6;
+
+	  while (init < n){
+	  	println "FIBONACCI DE: ";
+		println init;
+	  	r = fib(init);
+		println "ES: ";
+		println r;	
+		init = init + 1;
+	  }
+	  
+	//  println "FIB(N): ";
+	 // res = fib(n);
+	 // println res;
+
+      }
+}
+

@@ -8,7 +8,7 @@ import compiler.types.aliases.SemanticErrorMessage
 
 object Main extends Application{
   val pathToResourcesDir = System.getProperty("user.dir")+"/src/test/resources/"
-  val path = pathToResourcesDir+"condicionales.kdecaf"
+  val path = pathToResourcesDir+"fibonacci.kdecaf"
   val input = io.Source.fromFile(path).mkString
 
   //println("Input: \n"+input+"\n\n")

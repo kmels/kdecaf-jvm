@@ -1,0 +1,40 @@
+class Program {     
+      int factorial(int x){
+      	   int m;
+      	   int r;
+
+	   println "HACIENDO FACTORIAL DE ";
+	   println x;
+	   
+	   if (x < 2){
+	      println "UNO!";
+	      r = 1;
+	   }else{
+		println "MAYOR A CERO!";
+	      m = x - 1;
+	      r = factorial(m);
+	      println "DESPUES: ";
+	      println r;
+	      r = r * x;
+	   }	  
+      	   
+	   println "RESULTADO: "
+	   println r;
+	   return r;
+      }
+      
+      void main(){	                	  
+	  int n;
+	  int res;
+
+	  n = 7;
+	  println "N: ";
+	  println n;
+
+	  println "FACT(N): ";
+	  res = factorial(n);
+	  println res;
+
+      }
+}
+
