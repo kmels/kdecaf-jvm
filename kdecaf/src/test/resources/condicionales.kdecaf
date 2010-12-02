@@ -15,8 +15,30 @@ class Program {
 	     println "A ES MENOR QUE B"
 	  }
 	  else	{
-	     println "A ES MENOR QUE B"	
+	     println "B ES MENOR QUE A"	
 	  }	     
       }
 }
 
+
+//f[5] = f[1] < f[2]
+//	goto main_0 if f[5] is false
+//	print A ES MENOR QUE B
+//	main_0
+//	print A ES MENOR QUE B
+
+//iload_1
+//iload_2
+//if_icmplt seguir
+//goto main_0
+//seguir:
+//goto main_1
+//main_0:
+//
+
+//f[5] = true
+//goto main_0 if f[5]
+//goto main_1
+//main_0:
+//body1
+//goto main_1

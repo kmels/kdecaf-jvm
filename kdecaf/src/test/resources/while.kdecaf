@@ -1,0 +1,21 @@
+class Program {     
+      void main(){	                	  
+	  int a;
+      	  int b;
+	  int c;
+
+	  a = 0;
+	  b = 50;
+	  c = 1;
+         println "BEGIN"	  
+	  while (a < b){
+	  	println "A ES :"
+		println a;
+		a = a + c;
+	  }
+
+	  println "END"
+
+      }
+}
+

@@ -52,5 +52,9 @@ object CodegenLabelMaker {
   import IntermediateCodeMappers._
   var counter = 0
 
-  def apply(scope:KScope): codegen.Label  = codegen.Label(scope.scopeName+"_"+counter)
+  def apply(scope:KScope): codegen.Label  = {
+    val label = codegen.Label(scope.scopeName+"_"+counter)
+    counter += 1
+    label
+  }
 }

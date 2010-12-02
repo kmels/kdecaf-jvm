@@ -205,6 +205,9 @@ case class MethodDeclaration(val methodType:VarType,val name:String,val paramete
       if (ps.diff(ps.toSet.toSeq) != Nil) //ugly code, TODO: write a "nub" function instead
 	SemanticError("duplicate parameter names found in method "+name)
       
+      if (name=="main")
+	CodegenFields.place("args",this.name)
+
       parameters.foreach( p => CodegenFields.place(p.name,this.name) )
       //val symbolAttributes: SymbolAttributes = (methodType,parameters)      
       SymbolTable.put((this.name,methodScope),this)
@@ -350,16 +353,33 @@ trait ConditionStatement extends Statement{
   def imap(scope:KScope):codegen.Body  = {
     val blockStatements = codeBlock.imap(scope)       
     val predicate:codegen.Body = expression.imap(scope)
-    val nextBlockComputations:List[codegen.Statement] = nextBlockOfCode(scope) match { case Some(body) => body.computations ; case _ => Nil }
+
     val nextBlockLabel = CodegenLabelMaker(scope)
+    val elseBlockLabel = CodegenLabelMaker(scope)
+
+    val nextBlockOfCodeBody = nextBlockOfCode(scope)
+    
+    val gotoIfFalseLabel = nextBlockOfCodeBody match{
+      case Some(body) => elseBlockLabel
+      case _ => nextBlockLabel
+    }    
+
+    val nextBlockComputations:List[codegen.Statement] = nextBlockOfCodeBody match { 
+      case Some(body) => {
+	codegen.JumpStatement(nextBlockLabel) +:
+	elseBlockLabel +:
+	(body.computations ++ List(nextBlockLabel))
+      }
+      case _ => nextBlockLabel +: Nil 
+    }
+    
     val predicateAndGotoStatements:List[codegen.Statement] = predicate.computations :+
     codegen.GotoStatement(
       predicate.lastEvaluatedField,      
-      nextBlockLabel
-    ) 
+      gotoIfFalseLabel
+    )
 
-    //println("NEXT BLOCK: "+nextBlockLabel+": \n\n\t\t"+nextBlockComputations.mkString("\n\t\t"))
-    predicateAndGotoStatements ++ blockStatements.computations ++ List(nextBlockLabel) ++ nextBlockComputations
+    predicateAndGotoStatements ++ blockStatements.computations ++ nextBlockComputations
   }
     
   //assert on the type of the expression, it has to be boolean
@@ -385,12 +405,10 @@ trait PrintStatement[T] extends Statement with NoSemanticAction{
 }
 
 case class PrintString(val exp:String) extends PrintStatement[String]{
-  println("PRINT STRING: "+exp)
   override def imap(scope:KScope):codegen.Body = codegen.PrintLineStatement(exp)
 }
 
 case class PrintExpression(val exp:Expression) extends PrintStatement[Expression]{
-  println("PRINT EEXP: "+exp)
   override def imap(scope:KScope):codegen.Body = codegen.PrintIntegerStatement(exp.imap(scope).lastEvaluatedField)
 }
 
@@ -416,13 +434,61 @@ case class IfStatement(val expression:Expression,val codeBlock:Block, val elseBl
 
 case class WhileStatement(val expression:Expression,val codeBlock:Block) extends ConditionStatement with InnerTypeVoid{
   val children:List[Node] = List(expression,codeBlock)
-
+  
   val semanticAction = assertOnBooleanExprAndDoBlock
 
+  override def imap(scope:KScope):codegen.Body  = {
+    val evaluatePredicateLabel = CodegenLabelMaker(scope)
+    val continueBlockLabel = CodegenLabelMaker(scope)
+    val nextBlockLabel = CodegenLabelMaker(scope)
+        
+    val predicate:codegen.Body = expression.imap(scope)    
+    
+    val predicateAndGotoStatements:List[codegen.Statement] = List(evaluatePredicateLabel) ++ predicate.computations :+
+    codegen.GotoStatement(
+      predicate.lastEvaluatedField,      
+      nextBlockLabel
+    ) :+ JumpStatement(continueBlockLabel)
+    
+    val blockStatements = codeBlock.imap(scope)       
+
+    
+    
+    predicateAndGotoStatements ++ List(continueBlockLabel) ++ blockStatements :+ JumpStatement(evaluatePredicateLabel) :+ nextBlockLabel
+  }
+
+  
   def nextBlockOfCode(scope:KScope) = None
 }
 
-case class MethodCall(val name:String,val arguments:List[Expression]) extends Expression with NoCodeMapping{
+case class MethodCall(val name:String,val arguments:List[Expression]) extends Expression {
+
+  override def imap(scope:KScope):codegen.Body = {
+    val evaluatedFields:List[(List[codegen.Statement],codegen.Field)] = arguments.map(arg => {
+
+      println("Computando argumento: "+arg)
+      val expressionBody:codegen.Body = arg.imap(scope)
+      println("Computado: "+expressionBody)    
+      (expressionBody.computations,expressionBody.lastEvaluatedField)
+    })
+
+    val computations:List[codegen.Statement] = evaluatedFields.flatMap(_._1)
+    val argFields:List[Field] = evaluatedFields.map(_._2)
+
+    println("ARGFIELDS: ")
+    println(argFields.mkString("\nXX: "))
+
+    val method:MethodDeclaration = SymbolTable.get((this.name),"Program").get.asInstanceOf[MethodDeclaration]
+    //<-- fix
+    
+    val storeField = CodegenFields.placeAndGetTempField(scope.scopeName)
+    val methodValueComputations:List[codegen.Statement] = List(
+      codegen.InvokeMethod(argFields,"Program/"+name,method.parameters.map(p => varTypeToJVMType(p.varType)),method.methodType),
+      StoreToFieldStatement(storeField)
+    )
+    codegen.MethodBody(methodValueComputations)
+  }
+  
   val children:List[Node] = List[Node](name)++arguments
 
   val getUnderlyingType = () => SymbolTable.get(this.name,"Program") match{
@@ -548,8 +614,13 @@ case class Assignment(val location:Location,val expression:Expression) extends S
   def imap(scope:KScope):codegen.MethodBody = {
     val expressionBody = expression.imap(scope)
 
+    println("ASSIGNMENT.. lastEVALFIELD="+expressionBody.lastEvaluatedField
+	  )
+
+    val getField = CodegenFields.getField(location.name,scope.scopeName)
+    println("GETFIELD: "+getField)
     val thisAssignment = TwoAddressAssignment(
-	CodegenFields.getField(location.name,scope.scopeName),
+	getField,
 	expressionBody.lastEvaluatedField
     )
         
@@ -568,7 +639,11 @@ case class SimpleLocation(val name:String, val optionalMember:Option[Location] =
     case _ => List(s(name))
   }  
   
-  def imap(scope:KScope) = CodegenFields.getField(this.name,scope.scopeName)
+  def imap(scope:KScope) = {    
+    val f = CodegenFields.getField(this.name,scope.scopeName)
+    println("SIMPLELOCATION FIELD: "+f+"..."+f.lastEvaluatedField)
+    f
+  }
 
   //in case the optional member is trying to get fetched and it doesn't exist 
   object SemanticErrorType extends Enumeration{
@@ -727,6 +802,56 @@ trait ExpressionOperation[T] extends Expression{
   override def toString = super.toString+": "+m.toString
 }
 
+trait IntegerOperation extends BinaryOperation[Int] with InnerInt{
+//  self =>: BinaryOperation[Int]
+    
+  val codegenOperator:codegen.Operators.Operator
+
+  def imap(scope:KScope):codegen.MethodBody = {
+    val expression2Body:codegen.Body = exp2.imap(scope)
+    val expression1Body:codegen.Body = exp1.imap(scope)      
+
+    val thisComputation = ThreeAddressAssignment(
+      CodegenFields.placeAndGetTempField(scope.scopeName),
+      expression1Body.lastEvaluatedField,
+      expression2Body.lastEvaluatedField,
+      codegenOperator
+    )
+    
+    codegen.MethodBody(expression1Body.computations ++ expression2Body.computations :+ thisComputation)
+  }
+}
+
+trait BooleanOperation extends BinaryOperation[Boolean] with InnerBool{
+//  self =>: BinaryOperation[Int]
+    
+  val codegenOperator:codegen.Operators.Operator
+
+  def imap(scope:KScope):codegen.MethodBody = {
+    val expression2Body:codegen.Body = exp2.imap(scope)
+    val expression1Body:codegen.Body = exp1.imap(scope)
+    
+    val ifTrueLabel = CodegenLabelMaker(scope)
+    val ifFalseLabel = CodegenLabelMaker(scope)
+    val storeLabel = CodegenLabelMaker(scope)
+    val storeField = CodegenFields.placeAndGetTempField(scope.scopeName)
+    
+    val loadTrue:List[codegen.Statement] = List(JumpStatement(ifFalseLabel),ifTrueLabel,codegen.LoadValueStatement(codegen.Constants.TRUE),JumpStatement(storeLabel))
+    val loadFalse:List[codegen.Statement] = List(ifFalseLabel,codegen.LoadValueStatement(codegen.Constants.FALSE),storeLabel)
+    
+    val thisComputation:List[codegen.Statement] = List(
+      LoadFieldStatement(expression1Body.lastEvaluatedField),
+      LoadFieldStatement(expression2Body.lastEvaluatedField)  ,
+      GotoIfStatement(codegenOperator,ifTrueLabel)
+    )++
+      loadTrue++loadFalse++List(
+      StoreToFieldStatement(storeField)
+      )
+    
+    codegen.MethodBody(expression1Body.computations ++ expression2Body.computations ++ thisComputation)
+  }
+}
+
 trait BinaryOperation[T] extends ExpressionOperation[T] {
   val exp1:Expression
   val exp2:Expression
@@ -741,23 +866,7 @@ trait BinaryOperation[T] extends ExpressionOperation[T] {
 	"cannot operate "+ exp1 +" and "+exp2 +"; both must be of the same type. Found: "+exp1.getUnderlyingType+" and "+exp2.getUnderlyingType
       )
     }
-  )
-
-  val codegenOperator:codegen.Operators.Operator
-
-  def imap(scope:KScope):codegen.MethodBody = {
-    val expression2Body:codegen.Body = exp2.imap(scope)
-    val expression1Body:codegen.Body = exp1.imap(scope)
-
-    val thisComputation = ThreeAddressAssignment(
-      CodegenFields.placeAndGetTempField(scope.scopeName),
-	expression1Body.lastEvaluatedField,
-	expression2Body.lastEvaluatedField,
-	codegenOperator
-    )
-
-    codegen.MethodBody(expression1Body.computations ++ expression2Body.computations :+ thisComputation)
-  }
+  )  
 }
 
 trait UnaryOperation[T] extends ExpressionOperation[T] with NoSemanticAction with NoCodeMapping{
@@ -766,22 +875,25 @@ trait UnaryOperation[T] extends ExpressionOperation[T] with NoSemanticAction wit
 
 }
 
-case class ExpressionAdd(val exp1:Expression,val exp2:Expression)(implicit val m:Manifest[Int]) extends BinaryOperation[Int] with InnerInt{val codegenOperator = codegen.Operators.ADDITION }
+case class ExpressionAdd(val exp1:Expression,val exp2:Expression)(implicit val m:Manifest[Int]) extends IntegerOperation {val codegenOperator = codegen.Operators.ADDITION }
 
-case class ExpressionSub(val exp1:Expression,val exp2:Expression)(implicit val m:Manifest[Int]) extends BinaryOperation[Int] with InnerInt{val codegenOperator = codegen.Operators.SUBSTRACTION}
-case class ExpressionMult(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Int]) extends BinaryOperation[Int] with InnerInt{val codegenOperator = codegen.Operators.MULTIPLICATION}
-case class ExpressionDiv(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Int]) extends BinaryOperation[Int] with InnerInt{val codegenOperator = codegen.Operators.DIVISION}
-case class ExpressionMod(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Int]) extends BinaryOperation[Int] with InnerInt{val codegenOperator = codegen.Operators.MOD}
+case class ExpressionSub(val exp1:Expression,val exp2:Expression)(implicit val m:Manifest[Int]) extends IntegerOperation {val codegenOperator = codegen.Operators.SUBSTRACTION}
 
-case class ExpressionAnd(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] with InnerBool{val codegenOperator = codegen.Operators.AND}
-case class ExpressionOr(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] with InnerBool{val codegenOperator = codegen.Operators.OR}
+case class ExpressionMult(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Int]) extends IntegerOperation {val codegenOperator = codegen.Operators.MULTIPLICATION}
 
-case class ExpressionLessOrEquals(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] with InnerBool{val codegenOperator = codegen.Operators.LESSEQUALSTHAN}
-case class ExpressionLess(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] with InnerBool{val codegenOperator = codegen.Operators.LESSTHAN}
-case class ExpressionGreater(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] with InnerBool{val codegenOperator = codegen.Operators.GREATERTHAN}
-case class ExpressionGreaterOrEquals(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] with InnerBool{val codegenOperator = codegen.Operators.GREATEREQUALSTHAN}
-case class ExpressionEquals(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] with InnerBool{val codegenOperator = codegen.Operators.EQUALS}
-case class ExpressionNotEquals(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BinaryOperation[Boolean] with InnerBool{val codegenOperator = codegen.Operators.NEQUALS}
+case class ExpressionDiv(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Int]) extends IntegerOperation{val codegenOperator = codegen.Operators.DIVISION}
+
+case class ExpressionMod(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Int]) extends IntegerOperation{val codegenOperator = codegen.Operators.MOD}
+
+case class ExpressionAnd(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BooleanOperation{val codegenOperator = codegen.Operators.AND}
+case class ExpressionOr(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BooleanOperation{val codegenOperator = codegen.Operators.OR}
+
+case class ExpressionLessOrEquals(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BooleanOperation {val  codegenOperator = codegen.Operators.LESSEQUALSTHAN}
+case class ExpressionLess(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BooleanOperation {val  codegenOperator = codegen.Operators.LESSTHAN}
+case class ExpressionGreater(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BooleanOperation {val  codegenOperator = codegen.Operators.GREATERTHAN}
+case class ExpressionGreaterOrEquals(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BooleanOperation {val  codegenOperator = codegen.Operators.GREATEREQUALSTHAN}
+case class ExpressionEquals(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BooleanOperation {val  codegenOperator = codegen.Operators.EQUALS}
+case class ExpressionNotEquals(val exp1:Expression, val exp2:Expression)(implicit val m:Manifest[Boolean]) extends BooleanOperation {val  codegenOperator = codegen.Operators.NEQUALS}
 
 case class NegativeExpression(val exp:Expression)(implicit val m:Manifest[Int]) extends UnaryOperation[Int] with InnerInt
 case class NotExpression(val exp:Expression)(implicit val m:Manifest[Boolean]) extends UnaryOperation[Boolean] with InnerBool

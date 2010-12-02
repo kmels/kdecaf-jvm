@@ -1,0 +1,28 @@
+class Program {     
+      int masUno(int x){
+      	   return x + 1;
+      }
+
+      int sumar(int x,int y){
+      	  return x+y;
+      }
+      
+      void main(){	                	  
+	  int a;
+	  int b;    
+	  int c;
+
+	  a = 100;
+	  println "A:: ";
+	  println a;
+
+	  println "B=A+1: ";
+	  b = masUno(a);
+	  println b;
+
+	  println "C = B + A"
+	  c = sumar(a,b)
+	  println c;
+      }
+}
+

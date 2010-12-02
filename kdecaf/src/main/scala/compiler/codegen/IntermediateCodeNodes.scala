@@ -15,7 +15,7 @@ object JVMTypes extends Enumeration{
   
   val INT = JVMType("int",1,"I")
   val VOID = JVMType("void",2,"V")
-  val STRING_ARGS = JVMType("String",3,"[Ljava/lang/String")
+  val STRING_ARGS = JVMType("String",3,"[Ljava/lang/String;")
 }
 
 object Constants extends Enumeration{
@@ -27,8 +27,10 @@ object Constants extends Enumeration{
   }
 
   val ZERO = ConstantField[Int](constant=0,id=1)
-  val NULL = ConstantField[Any](constant=0,2)
-  val NOTHING = ConstantField[Any](None,3)
+  val TRUE = ConstantField[Int](constant=1,id=2)
+  val FALSE = ConstantField[Int](constant=0,id=3)
+  val NULL = ConstantField[Any](constant=0,4)
+  val NOTHING = ConstantField[Any](None,5)
   
 }
 import JVMTypes._
@@ -56,8 +58,6 @@ trait Field extends AnyValue  {
   val lastEvaluatedField = this
   val store:String
   val load:String
-
-  println("CREO FIELD "+index)
 }
 
 case class GlobalField(val index:Int) extends Field{ 
@@ -72,6 +72,24 @@ case class LocalField(val index:Int) extends Field{
   val store:String = NMenomics.storeField(index)
 }
 
+case class LoadValueStatement(x:Constants.ConstantField[Int]) extends Statement {
+  override def toString = NMenomics.loadValue(x)
+
+  def jasminCode(implicit tabSpace:Int) = StringBuilder(x.load)
+}
+
+case class LoadFieldStatement(field: Field) extends Statement {
+  override def toString = "load "+field.toString
+
+  def jasminCode(implicit tabSpace:Int) = NMenomics.loadField(field.index)
+}
+
+case class StoreToFieldStatement(field: Field) extends Statement {
+  override def toString = "store "+field.toString
+
+  def jasminCode(implicit tabSpace:Int) = NMenomics.storeField(field.index)
+}
+
 case class GotoStatement(val evaluatedField:Field, val addressLabel:Label) extends Statement{
   override def toString = "goto "+addressLabel+" if "+evaluatedField.toString
 
@@ -79,7 +97,19 @@ case class GotoStatement(val evaluatedField:Field, val addressLabel:Label) exten
     evaluatedField.load,
     "ifeq "+addressLabel
   )
+}
 
+case class GotoIfStatement(val codegenOperator:Operators.Operator,val addressLabel:Label) extends Statement{
+  override def toString = "goto "+addressLabel+" if "+codegenOperator.jvmMnemonic
+  
+  def jasminCode(implicit tabSpace:Int) = StringBuilder(codegenOperator.jvmMnemonic+" "+addressLabel)
+  
+}
+
+case class JumpStatement(val addressLabel:Label) extends Statement{
+  override def toString = "goto "+addressLabel
+
+  def jasminCode(implicit tabSpace:Int):String = StringBuilder("goto "+addressLabel)
 }
 
 case class PrintLineStatement(val line:String) extends Statement{
@@ -116,6 +146,9 @@ case class TwoAddressAssignment(val assignedVar:Field,var1:AnyValue) extends Ass
       StringBuilder(".field public g_"+index+" I")
     }
     case LocalField(index)=>{
+      println("VAR1: "+var1.load)
+      println("ASSIGNEDVAR: "+assignedVar.store)
+
       StringBuilder(var1.load,
 		    assignedVar.store)
     }
@@ -127,7 +160,8 @@ case class ThreeAddressAssignment(val assignedVar:Field,var1:Field,var2:Field,op
   def jasminCode(implicit tabSpaces:Int):String = 
     StringBuilder(var1.load,
 		  var2.load,
-		  operator.jvmMnemonic)
+		  operator.jvmMnemonic,
+		  assignedVar.store)
 }
 		
 case class Return(t: JVMType, val returnField:Option[Field]) extends Body with Statement{
@@ -172,7 +206,7 @@ object Operators extends Enumeration{
   } 
 
   val ADDITION = FieldOperator("+","iadd")
-  val SUBSTRACTION = FieldOperator("-","isubstract")
+  val SUBSTRACTION = FieldOperator("-","isub")
   val MULTIPLICATION = FieldOperator("*","imul")
   val DIVISION = FieldOperator("/","idiv")
   val MOD = FieldOperator("%","irem")
@@ -184,6 +218,14 @@ object Operators extends Enumeration{
   val GREATEREQUALSTHAN = FieldOperator(">=","if_icmpge")
   val EQUALS = FieldOperator("==","ifeq")
   val NEQUALS = FieldOperator("!=","ifeq")
+}
+
+case class InvokeMethod(val args:List[Field],val pathToMethod:String,val types:List[JVMType],val returnType:JVMType) extends Statement{
+  def jasminCode(implicit tabSpace:Int) = 
+    StringBuilder(
+      StringBuilder(args.map(_.load):_*),
+    "invokestatic "+pathToMethod+StringBuilder.arguments(types)+returnType.jasminType
+  )  
 }
 
 case class Method(returnType: JVMType, name:String, var params: List[Parameter], body: MethodBody) extends ClassMember{
@@ -232,7 +274,7 @@ trait Body{
 case class Label(val labelName:String) extends Statement{
   override def toString = labelName;
 
-  def jasminCode(implicit tabSpace:Int) = StringBuilder("Pendiente #LABEL")
+  def jasminCode(implicit tabSpace:Int) = StringBuilder(labelName+":")
 }
 
 case class MethodBody(val computations: List[Statement]) extends Body{
@@ -244,6 +286,7 @@ case class MethodBody(val computations: List[Statement]) extends Body{
     case printStatement : PrintLineStatement => null
     case printInteger : PrintIntegerStatement => null
     case label : Label => null
+    case StoreToFieldStatement(storeField) => storeField
   }
 
   val lastEvaluatedField:Field = computations match{
@@ -259,38 +302,39 @@ case class MethodBody(val computations: List[Statement]) extends Body{
     )
 }
 
-object DummyBody{
+/*object DummyBody{
   def apply(p:String):MethodBody = new MethodBody(Nil){
     override val lastEvaluatedField = LocalField(-1)
   }
-}
+}*/
 
 object StringBuilder{
   def apply(xs:String*)(implicit tabSpaces:Int):String = fromList(xs.toList)
 
-  def parameters(params:Seq[Parameter]) = "("+params.map(_.jasminType).mkString("",";",";")+")"
+  def parameters(params:Seq[Parameter]) = "("+params.map(_.jasminType).mkString+")"
 
-  private def fromList(xs:List[String])(implicit tabSpaces:Int):String = xs.foldLeft(tab)((a,b) => a+"\n"+tab+b)
+  def arguments(jvmTypes:List[JVMType]) = "("+jvmTypes.map(_.jasminType).mkString+")"
+
+  private def fromList(xs:List[String])(implicit tabSpaces:Int):String = xs.reduceLeft((a,b) => a+"\n"+tab+b)
 
   private def tab(implicit tabSpaces:Int):String = (for (t <- 1 to tabSpaces) yield "\t").mkString
 }
 
 object NMenomics {
   def pushConstant[T](x:T) = x match{
-    case int:Int => if (int < 6) "iconst_"+int else "bipush "+int
+    case int:Int => if (int < 6) "iconst_"+(int-1) else "bipush "+(int-1)
   }
 
   def storeField(index:Int):String = 
-    if (index < 4) "istore_"+index else "istore "+index
+    if (index < 4) "istore_"+(index-1) else "istore "+(index-1)
 
 
   def loadField(index:Int) = 
-    if (index < 4) "iload_"+index else "iload "+index
+    if (index < 4) "iload_"+(index-1) else "iload "+(index-1)
 
-  def loadValue[T](value:T) = value match{
+  def loadValue[T](value:T):String = value match{
     case int:Int => if (int < 4) "iconst_"+int else "bipush "+int
+    case constantField:Constants.ConstantField[_] => constantField.load
     case wtf => "WTF???: "+wtf
   }
-
-
 }
